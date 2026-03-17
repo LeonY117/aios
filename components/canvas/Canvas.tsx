@@ -66,7 +66,7 @@ function CanvasInner() {
         };
         setNodes((nds) => [
           ...nds,
-          { id: nodeId, type: "sotCard", position, data: loadingData },
+          { id: nodeId, type: "sotCard", position, data: loadingData, style: { width: 288, height: 320 } },
         ]);
 
         fetch("/api/sources/url", {

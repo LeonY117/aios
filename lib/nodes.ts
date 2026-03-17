@@ -10,6 +10,7 @@ export function createSotNode(
     type: "sotCard",
     position,
     data,
+    style: { width: 288, height: 320 },
   };
 }
 
