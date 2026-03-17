@@ -20,6 +20,13 @@ import type { SotNodeData } from "@/types";
 
 const nodeTypes = { sotCard: SotCardNode };
 
+const SOURCE_ENDPOINT: Record<string, string> = {
+  github: "/api/sources/github",
+  notion: "/api/sources/notion",
+  url: "/api/sources/url",
+  chatgpt: "/api/sources/url", // Phase 4 adds dedicated handler
+};
+
 function CanvasInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, , onEdgesChange] = useEdgesState([]);
@@ -57,10 +64,13 @@ function CanvasInner() {
         setNodes((nds) => [...nds, createSotNode(data, position)]);
       } else {
         const nodeId = crypto.randomUUID();
+        const sourceType: SotNodeData["sourceType"] =
+          detection.type === "chatgpt" ? "url" : detection.type;
+        const endpoint = SOURCE_ENDPOINT[detection.type] ?? "/api/sources/url";
         const loadingData: SotNodeData = {
           title: detection.url,
           content: "",
-          sourceType: "url",
+          sourceType,
           sourceUrl: detection.url,
           isLoading: true,
         };
@@ -69,7 +79,7 @@ function CanvasInner() {
           { id: nodeId, type: "sotCard", position, data: loadingData, style: { width: 288, height: 320 } },
         ]);
 
-        fetch("/api/sources/url", {
+        fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url: detection.url }),
@@ -103,7 +113,7 @@ function CanvasInner() {
                         title: detection.url,
                         content:
                           "Failed to fetch or extract content from this URL.",
-                        sourceType: "url" as const,
+                        sourceType,
                         sourceUrl: detection.url,
                         isLoading: false,
                       } satisfies SotNodeData,
