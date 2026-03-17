@@ -1,0 +1,17 @@
+repos:
+  # Utility checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+
+  # Frontend linting
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: npx eslint
+        language: system
+        files: \.(ts|tsx|js|jsx)$
+        pass_filenames: false
