@@ -2,6 +2,7 @@
 
 import { memo } from "react";
 import type { NodeProps } from "@xyflow/react";
+import ReactMarkdown from "react-markdown";
 import type { SotNodeData } from "@/types";
 
 const sourceBadgeColors: Record<SotNodeData["sourceType"], string> = {
@@ -13,7 +14,7 @@ const sourceBadgeColors: Record<SotNodeData["sourceType"], string> = {
 
 function LoadingSkeleton({ data }: { data: SotNodeData }) {
   return (
-    <div className="w-64 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900 truncate">
           {data.title}
@@ -38,13 +39,8 @@ function SotCardNode({ data }: NodeProps & { data: SotNodeData }) {
     return <LoadingSkeleton data={data} />;
   }
 
-  const truncated =
-    data.content.length > 200
-      ? data.content.slice(0, 200) + "…"
-      : data.content;
-
   return (
-    <div className="w-64 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900 truncate">
           {data.title}
@@ -55,7 +51,9 @@ function SotCardNode({ data }: NodeProps & { data: SotNodeData }) {
           {data.sourceType}
         </span>
       </div>
-      <p className="text-xs leading-relaxed text-gray-600">{truncated}</p>
+      <div className="nowheel max-h-64 overflow-y-auto text-xs leading-relaxed text-gray-600 prose prose-xs prose-gray">
+        <ReactMarkdown>{data.content}</ReactMarkdown>
+      </div>
     </div>
   );
 }
