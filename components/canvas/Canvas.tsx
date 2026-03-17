@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -7,70 +8,140 @@ import {
   BackgroundVariant,
   useNodesState,
   useEdgesState,
+  useReactFlow,
+  type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import SotCardNode from "./nodes/SotCardNode";
+import { detectSource } from "@/lib/sources/detect";
+import { createSotNode, viewportCenter } from "@/lib/nodes";
 import type { SotNodeData } from "@/types";
 
 const nodeTypes = { sotCard: SotCardNode };
 
-const initialNodes = [
-  {
-    id: "1",
-    type: "sotCard",
-    position: { x: 100, y: 100 },
-    data: {
-      title: "Project Requirements",
-      content:
-        "AIOS is a canvas-based context management tool for LLM conversations. Users can collect sources of truth (SOTs) and wire them into AI chat sessions. The goal is to give users visual transparency over what context their LLM has access to.",
-      sourceType: "notion",
-      sourceUrl: "https://notion.so/example",
-    } satisfies SotNodeData,
-  },
-  {
-    id: "2",
-    type: "sotCard",
-    position: { x: 450, y: 80 },
-    data: {
-      title: "API Design Notes",
-      content:
-        "The REST API should expose endpoints for managing SOT nodes and chat sessions. Each SOT node has a title, content body, source type, and optional source URL. Chat nodes maintain a message history and a list of attached SOT references.",
-      sourceType: "github",
-    } satisfies SotNodeData,
-  },
-  {
-    id: "3",
-    type: "sotCard",
-    position: { x: 250, y: 350 },
-    data: {
-      title: "Meeting Notes — Kickoff",
-      content:
-        "Decided to start with manual text SOTs before building integrations. Phase 1 focuses on canvas rendering and node display. Phase 2 adds persistence with localStorage. Integrations (Notion, Slack) come in v1+.",
-      sourceType: "manual",
-    } satisfies SotNodeData,
-  },
-];
+function CanvasInner() {
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, , onEdgesChange] = useEdgesState([]);
+  const { screenToFlowPosition } = useReactFlow();
+
+  const handlePaste = useCallback(
+    (e: ClipboardEvent) => {
+      const active = document.activeElement;
+      if (
+        active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement ||
+        (active instanceof HTMLElement && active.isContentEditable)
+      ) {
+        return;
+      }
+
+      const text = e.clipboardData?.getData("text/plain");
+      if (!text) return;
+
+      e.preventDefault();
+
+      const detection = detectSource(text);
+      const position = viewportCenter(screenToFlowPosition);
+
+      if (detection.type === "manual") {
+        const title =
+          detection.text.length > 50
+            ? detection.text.slice(0, 50) + "…"
+            : detection.text;
+        const data: SotNodeData = {
+          title,
+          content: detection.text,
+          sourceType: "manual",
+        };
+        setNodes((nds) => [...nds, createSotNode(data, position)]);
+      } else {
+        const nodeId = crypto.randomUUID();
+        const loadingData: SotNodeData = {
+          title: detection.url,
+          content: "",
+          sourceType: "url",
+          sourceUrl: detection.url,
+          isLoading: true,
+        };
+        setNodes((nds) => [
+          ...nds,
+          { id: nodeId, type: "sotCard", position, data: loadingData },
+        ]);
+
+        fetch("/api/sources/url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: detection.url }),
+        })
+          .then((res) => res.json())
+          .then((result) => {
+            setNodes((nds) =>
+              nds.map((n) =>
+                n.id === nodeId
+                  ? {
+                      ...n,
+                      data: {
+                        title: result.title,
+                        content: result.content,
+                        sourceType: result.sourceType,
+                        sourceUrl: result.sourceUrl,
+                        isLoading: false,
+                      } satisfies SotNodeData,
+                    }
+                  : n,
+              ),
+            );
+          })
+          .catch(() => {
+            setNodes((nds) =>
+              nds.map((n) =>
+                n.id === nodeId
+                  ? {
+                      ...n,
+                      data: {
+                        title: detection.url,
+                        content:
+                          "Failed to fetch or extract content from this URL.",
+                        sourceType: "url" as const,
+                        sourceUrl: detection.url,
+                        isLoading: false,
+                      } satisfies SotNodeData,
+                    }
+                  : n,
+              ),
+            );
+          });
+      }
+    },
+    [screenToFlowPosition, setNodes],
+  );
+
+  useEffect(() => {
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, [handlePaste]);
+
+  return (
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      nodeTypes={nodeTypes}
+      minZoom={0.25}
+      maxZoom={2}
+    >
+      <Background variant={BackgroundVariant.Dots} />
+    </ReactFlow>
+  );
+}
 
 export default function Canvas() {
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState([]);
-
   return (
     <div className="w-screen h-dvh">
       <ReactFlowProvider>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          nodeTypes={nodeTypes}
-          minZoom={0.25}
-          maxZoom={2}
-          fitView
-        >
-          <Background variant={BackgroundVariant.Dots} />
-        </ReactFlow>
+        <CanvasInner />
       </ReactFlowProvider>
     </div>
   );
