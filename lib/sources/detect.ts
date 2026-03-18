@@ -1,5 +1,5 @@
 export type SourceDetection =
-  | { type: "notion" | "github" | "chatgpt" | "url"; url: string }
+  | { type: "notion" | "github" | "chatgpt" | "claude" | "url"; url: string }
   | { type: "manual"; text: string };
 
 export function detectSource(text: string): SourceDetection {
@@ -21,6 +21,9 @@ export function detectSource(text: string): SourceDetection {
     }
     if (/chatgpt\.com\/share\//.test(href)) {
       return { type: "chatgpt", url: href };
+    }
+    if (/claude\.ai\/share\//.test(href)) {
+      return { type: "claude", url: href };
     }
 
     return { type: "url", url: href };

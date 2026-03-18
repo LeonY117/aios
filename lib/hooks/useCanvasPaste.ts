@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { useReactFlow, type Node } from "@xyflow/react";
 import { detectSource } from "@/lib/sources/detect";
+import { parseClaudeShareHtml } from "@/lib/sources/claude/parse-share-html";
 import { createSotNode, viewportCenter } from "@/lib/nodes";
 import type { SotNodeData, ChatNodeData, ChatMessage } from "@/types";
 
@@ -108,6 +109,79 @@ export function useCanvasPaste(setNodes: SetNodes) {
                             role: "assistant",
                             content:
                               "Failed to fetch or parse this ChatGPT conversation.",
+                          },
+                        ],
+                        isLoading: false,
+                      } satisfies ChatNodeData,
+                    }
+                  : n,
+              ),
+            );
+          });
+        return;
+      }
+
+      if (detection.type === "claude") {
+        // Claude share links are behind Cloudflare — fetch client-side
+        const nodeId = crypto.randomUUID();
+        const loadingData: ChatNodeData = {
+          title: detection.url,
+          source: "claude",
+          messages: [],
+          isLoading: true,
+        };
+        setNodes((nds) => [
+          ...nds,
+          {
+            id: nodeId,
+            type: "chatWindow",
+            position,
+            data: loadingData,
+            style: { width: 380, height: 420 },
+          },
+        ]);
+
+        fetch(detection.url)
+          .then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.text();
+          })
+          .then((html) => {
+            const conversation = parseClaudeShareHtml(html);
+            if (!conversation || conversation.messages.length === 0) {
+              throw new Error("Could not extract messages");
+            }
+            setNodes((nds) =>
+              nds.map((n) =>
+                n.id === nodeId
+                  ? {
+                      ...n,
+                      data: {
+                        title: conversation.title,
+                        source: "claude",
+                        model: conversation.model,
+                        messages: conversation.messages,
+                        isLoading: false,
+                      } satisfies ChatNodeData,
+                    }
+                  : n,
+              ),
+            );
+          })
+          .catch(() => {
+            setNodes((nds) =>
+              nds.map((n) =>
+                n.id === nodeId
+                  ? {
+                      ...n,
+                      data: {
+                        title: "Import Failed",
+                        source: "claude",
+                        messages: [
+                          {
+                            role: "assistant",
+                            content:
+                              "Failed to fetch this Claude conversation. Claude share pages are protected by Cloudflare, so client-side fetch may be blocked by CORS. Try copying the conversation text and pasting it directly.",
                           },
                         ],
                         isLoading: false,
