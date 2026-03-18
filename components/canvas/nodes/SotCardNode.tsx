@@ -8,6 +8,7 @@ import type { SotNodeData } from "@/types";
 const sourceBadgeColors: Record<SotNodeData["sourceType"], string> = {
   notion: "bg-gray-800 text-white",
   github: "bg-purple-600 text-white",
+  slack: "bg-[#4A154B] text-white",
   url: "bg-blue-500 text-white",
   chatgpt: "bg-emerald-600 text-white",
   manual: "bg-green-600 text-white",

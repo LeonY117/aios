@@ -1,5 +1,5 @@
 export type SourceDetection =
-  | { type: "notion" | "github" | "chatgpt" | "claude" | "url"; url: string }
+  | { type: "notion" | "github" | "slack" | "chatgpt" | "claude" | "url"; url: string }
   | { type: "manual"; text: string };
 
 export function detectSource(text: string): SourceDetection {
@@ -18,6 +18,9 @@ export function detectSource(text: string): SourceDetection {
     }
     if (/github\.com\/.+\/(pull|issues)\/\d+/.test(href)) {
       return { type: "github", url: href };
+    }
+    if (/\.slack\.com\/archives\/[A-Z0-9]+\/p\d+/.test(href)) {
+      return { type: "slack", url: href };
     }
     if (/chatgpt\.com\/share\//.test(href)) {
       return { type: "chatgpt", url: href };

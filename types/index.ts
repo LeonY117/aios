@@ -1,7 +1,7 @@
 export type SotNodeData = {
   title: string;
   content: string;
-  sourceType: "notion" | "github" | "url" | "chatgpt" | "manual";
+  sourceType: "notion" | "github" | "slack" | "url" | "chatgpt" | "manual";
   sourceUrl?: string;
   isLoading?: boolean;
 };
