@@ -1,7 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { useReactFlow, type Node } from "@xyflow/react";
 import { detectSource } from "@/lib/sources/detect";
-import { parseClaudeShareHtml } from "@/lib/sources/claude/parse-share-html";
 import { createSotNode, viewportCenter } from "@/lib/nodes";
 import type { SotNodeData, ChatNodeData, ChatMessage } from "@/types";
 
@@ -12,6 +11,7 @@ const SOURCE_ENDPOINT: Record<string, string> = {
   notion: "/api/sources/notion",
   url: "/api/sources/url",
   chatgpt: "/api/sources/chatgpt",
+  claude: "/api/sources/claude",
 };
 
 export function useCanvasPaste(setNodes: SetNodes) {
@@ -122,7 +122,7 @@ export function useCanvasPaste(setNodes: SetNodes) {
       }
 
       if (detection.type === "claude") {
-        // Claude share links are behind Cloudflare — fetch client-side
+        // Claude share links — use Puppeteer-based server route to bypass Cloudflare
         const nodeId = crypto.randomUUID();
         const loadingData: ChatNodeData = {
           title: detection.url,
@@ -141,26 +141,24 @@ export function useCanvasPaste(setNodes: SetNodes) {
           },
         ]);
 
-        fetch(detection.url)
-          .then((res) => {
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.text();
-          })
-          .then((html) => {
-            const conversation = parseClaudeShareHtml(html);
-            if (!conversation || conversation.messages.length === 0) {
-              throw new Error("Could not extract messages");
-            }
+        fetch(SOURCE_ENDPOINT.claude, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: detection.url }),
+        })
+          .then((res) => res.json())
+          .then((result) => {
+            const messages: ChatMessage[] = result.messages ?? [];
             setNodes((nds) =>
               nds.map((n) =>
                 n.id === nodeId
                   ? {
                       ...n,
                       data: {
-                        title: conversation.title,
+                        title: result.title ?? "Claude Conversation",
                         source: "claude",
-                        model: conversation.model,
-                        messages: conversation.messages,
+                        model: result.model,
+                        messages,
                         isLoading: false,
                       } satisfies ChatNodeData,
                     }
@@ -181,7 +179,7 @@ export function useCanvasPaste(setNodes: SetNodes) {
                           {
                             role: "assistant",
                             content:
-                              "Failed to fetch this Claude conversation. Claude share pages are protected by Cloudflare, so client-side fetch may be blocked by CORS. Try copying the conversation text and pasting it directly.",
+                              "Failed to fetch or parse this Claude conversation.",
                           },
                         ],
                         isLoading: false,

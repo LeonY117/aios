@@ -105,7 +105,7 @@ function ChatNode({ id, data, selected }: NodeProps & { data: ChatNodeData }) {
               {data.title}
             </h3>
             <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500">
-              {data.messages.length} msgs
+              {data.messages?.length ?? 0} msgs
             </span>
             {data.model && (
               <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500">
@@ -142,7 +142,7 @@ function ChatNode({ id, data, selected }: NodeProps & { data: ChatNodeData }) {
         {/* Messages */}
         {expanded && (
           <div className="nodrag nowheel min-h-0 flex-1 overflow-y-auto p-3 space-y-3">
-            {data.messages.map((msg, i) => (
+            {(data.messages ?? []).map((msg, i) => (
               <div
                 key={i}
                 className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
