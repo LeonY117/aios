@@ -1,6 +1,18 @@
 import { NextResponse } from "next/server";
 import { Client } from "@notionhq/client";
 import { NotionToMarkdown } from "notion-to-md";
+import MarkdownIt from "markdown-it";
+
+const md = new MarkdownIt();
+
+/** Convert markdown inside <details> blocks to HTML so nested lists render. */
+function renderDetailsContent(content: string): string {
+  return content.replace(
+    /(<details>\s*<summary>.*?<\/summary>)([\s\S]*?)(<\/details>)/g,
+    (_match, open: string, body: string, close: string) =>
+      `${open}\n${md.render(body.trim())}\n${close}`,
+  );
+}
 
 // Notion URLs contain a 32-char hex ID (with or without dashes)
 const PAGE_ID_RE = /([a-f0-9]{32}|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i;
@@ -66,7 +78,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       title,
-      content: content || "*(empty page)*",
+      content: renderDetailsContent(content) || "*(empty page)*",
       sourceType: "notion",
       sourceUrl: url,
     });
