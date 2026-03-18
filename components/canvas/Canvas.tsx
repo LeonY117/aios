@@ -21,9 +21,10 @@ import "@xyflow/react/dist/style.css";
 import SotCardNode from "./nodes/SotCardNode";
 import ChatNode from "./nodes/ChatNode";
 import ContextBlockNode from "./nodes/ContextBlockNode";
+import LinkInputNode from "./nodes/LinkInputNode";
 import CanvasToolbar from "./CanvasToolbar";
 import WorkspaceSidebar from "@/components/WorkspaceSidebar";
-import { useCanvasPaste, handleLinkAdd } from "@/lib/hooks/useCanvasPaste";
+import { useCanvasPaste } from "@/lib/hooks/useCanvasPaste";
 import { viewportCenter } from "@/lib/nodes";
 import {
   loadSession,
@@ -41,6 +42,7 @@ const nodeTypes = {
   sotCard: SotCardNode,
   chatWindow: ChatNode,
   contextBlock: ContextBlockNode,
+  linkInput: LinkInputNode,
 };
 
 type SaveStatus = "idle" | "saving" | "saved";
@@ -262,13 +264,17 @@ function CanvasInner() {
     setNodes((nds) => [...nds, node]);
   }, [screenToFlowPosition, setNodes]);
 
-  const addLink = useCallback(
-    (url: string) => {
-      const position = viewportCenter(screenToFlowPosition);
-      handleLinkAdd(url, position, setNodes);
-    },
-    [screenToFlowPosition, setNodes],
-  );
+  const addLinkNode = useCallback(() => {
+    const position = viewportCenter(screenToFlowPosition);
+    const node: Node = {
+      id: crypto.randomUUID(),
+      type: "linkInput",
+      position,
+      data: {},
+      style: { width: 360, height: 140 },
+    };
+    setNodes((nds) => [...nds, node]);
+  }, [screenToFlowPosition, setNodes]);
 
   const addContextBlock = useCallback(() => {
     const position = viewportCenter(screenToFlowPosition);
@@ -302,7 +308,7 @@ function CanvasInner() {
       >
         <Background variant={BackgroundVariant.Dots} />
       </ReactFlow>
-      <CanvasToolbar onAddText={addTextBlock} onAddLink={addLink} />
+      <CanvasToolbar onAddText={addTextBlock} onAddLink={addLinkNode} />
       <WorkspaceSidebar
         currentSession={currentSession}
         onSwitch={handleSwitch}
