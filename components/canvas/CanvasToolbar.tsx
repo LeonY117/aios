@@ -3,11 +3,13 @@
 type CanvasToolbarProps = {
   onAddText: () => void;
   onAddLink: () => void;
+  onAddContextBlock: () => void;
 };
 
 export default function CanvasToolbar({
   onAddText,
   onAddLink,
+  onAddContextBlock,
 }: CanvasToolbarProps) {
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-1 py-1 shadow-lg">
@@ -54,6 +56,17 @@ export default function CanvasToolbar({
           <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
           <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
         </svg>
+      </button>
+
+      <div className="h-5 w-px bg-gray-200" />
+
+      {/* Context block button */}
+      <button
+        onClick={onAddContextBlock}
+        title="Add context block"
+        className="nodrag flex items-center gap-1.5 rounded-md bg-indigo-500 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-indigo-600 transition-colors"
+      >
+        + Context
       </button>
     </div>
   );
