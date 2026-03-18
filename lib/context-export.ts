@@ -1,19 +1,38 @@
 import type { Node } from "@xyflow/react";
-import type { SotNodeData } from "@/types";
+import type { SotNodeData, ChatNodeData } from "@/types";
 
-export function compileContext(sotNodes: Node<SotNodeData>[]): string {
-  if (sotNodes.length === 0) return "";
+type ContextNode = Node<SotNodeData> | Node<ChatNodeData>;
 
-  const sections = sotNodes.map((node) => {
+function isChatNode(node: ContextNode): node is Node<ChatNodeData> {
+  return "messages" in node.data && Array.isArray(node.data.messages);
+}
+
+function nodeToSection(node: ContextNode): string {
+  if (isChatNode(node)) {
     const d = node.data;
     const lines: string[] = [`## Source: ${d.title}`];
-    lines.push(`**Type:** ${d.sourceType}`);
-    if (d.sourceUrl) {
-      lines.push(`**URL:** ${d.sourceUrl}`);
+    lines.push(`**Type:** ${d.source} conversation`);
+    if (d.model) lines.push(`**Model:** ${d.model}`);
+    lines.push("");
+    for (const msg of d.messages ?? []) {
+      const label = msg.role === "user" ? "User" : "Assistant";
+      lines.push(`**${label}:**\n\n${msg.content}\n`);
     }
-    lines.push("", d.content);
     return lines.join("\n");
-  });
+  }
+
+  const d = node.data as SotNodeData;
+  const lines: string[] = [`## Source: ${d.title}`];
+  lines.push(`**Type:** ${d.sourceType}`);
+  if (d.sourceUrl) lines.push(`**URL:** ${d.sourceUrl}`);
+  lines.push("", d.content);
+  return lines.join("\n");
+}
+
+export function compileContext(nodes: ContextNode[]): string {
+  if (nodes.length === 0) return "";
+
+  const sections = nodes.map(nodeToSection);
 
   return [
     "# Project Context",

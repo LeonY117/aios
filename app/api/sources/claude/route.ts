@@ -60,7 +60,11 @@ export async function POST(request: Request) {
 
     // Extract conversation data from the DOM
     const conversation = await page.evaluate(() => {
+      // The page header contains "Conversation TitleShared by Name"
+      const headerEl = document.querySelector('[data-testid="page-header"]');
+      const headerText = headerEl?.textContent?.trim() ?? "";
       const title =
+        headerText.replace(/Shared by\s+.*$/, "").trim() ||
         document.title.replace(/\s*[-\u2013\u2014]\s*Claude\s*$/, "") ||
         "Claude Conversation";
 
