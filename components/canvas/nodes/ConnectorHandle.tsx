@@ -3,9 +3,8 @@
 import { Handle, Position, type HandleProps } from "@xyflow/react";
 
 /**
- * Large connector handle with a "+" icon on the side of the node.
- * The Handle sits on the edge of the node for easy click-to-drag.
- * Edges still route center-to-center via the CenterEdge component.
+ * Large connector handle with a "+" icon at the bottom corner of the node.
+ * Hidden by default, fades in when the parent node is hovered.
  */
 export default function ConnectorHandle({
   type,
@@ -18,11 +17,19 @@ export default function ConnectorHandle({
       type={type}
       position={isTarget ? Position.Left : Position.Right}
       {...props}
-      className={`!w-10 !h-10 !bg-transparent !border-0 !rounded-full
-        ${isTarget ? "!-left-5" : "!-right-5"}`}
+      className="!w-10 !h-10 !bg-transparent !border-0 !rounded-full !cursor-pointer connector-handle"
+      style={{
+        top: "auto",
+        bottom: "-12px",
+        ...(isTarget
+          ? { left: "-12px", right: "auto" }
+          : { right: "-12px", left: "auto" }),
+        transform: "none",
+      }}
     >
       <div
-        className={`absolute inset-0 rounded-full border-2 flex items-center justify-center pointer-events-none transition-all
+        className={`connector-handle-visual absolute inset-0 rounded-full border-2 flex items-center justify-center pointer-events-none
+          opacity-0 scale-90 transition-all duration-200 ease-out
           ${
             isTarget
               ? "bg-indigo-50 border-indigo-300"

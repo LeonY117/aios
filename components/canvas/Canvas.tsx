@@ -340,6 +340,22 @@ export default function Canvas() {
       <style>{`
         svg.react-flow__connectionline { z-index: -1 !important; }
         .react-flow .react-flow__edges { z-index: -1 !important; }
+        .react-flow__node:hover .connector-handle-visual {
+          opacity: 1 !important;
+          transform: scale(1) !important;
+        }
+        .connector-handle:hover .connector-handle-visual {
+          background-color: #eef2ff !important;
+          border-color: #818cf8 !important;
+        }
+        .connector-handle:hover .connector-handle-visual svg {
+          color: #6366f1 !important;
+        }
+        .context-drop-handle:hover + .context-drop-content {
+          border-color: #818cf8 !important;
+          background-color: #e0e7ff !important;
+          box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25) !important;
+        }
       `}</style>
       <ReactFlowProvider>
         <CanvasInner />

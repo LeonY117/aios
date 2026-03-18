@@ -2,6 +2,7 @@
 
 import {
   getBezierPath,
+  Position,
   useInternalNode,
   type EdgeProps,
 } from "@xyflow/react";
@@ -29,11 +30,23 @@ export default function CenterEdge({
     y: targetNode.internals.positionAbsolute.y + (targetNode.measured.height ?? 0) / 2,
   };
 
+  // Determine curve direction based on relative node positions
+  const dx = targetCenter.x - sourceCenter.x;
+  const dy = targetCenter.y - sourceCenter.y;
+  const sourcePos = Math.abs(dx) > Math.abs(dy)
+    ? (dx > 0 ? Position.Right : Position.Left)
+    : (dy > 0 ? Position.Bottom : Position.Top);
+  const targetPos = Math.abs(dx) > Math.abs(dy)
+    ? (dx > 0 ? Position.Left : Position.Right)
+    : (dy > 0 ? Position.Top : Position.Bottom);
+
   const [edgePath] = getBezierPath({
     sourceX: sourceCenter.x,
     sourceY: sourceCenter.y,
+    sourcePosition: sourcePos,
     targetX: targetCenter.x,
     targetY: targetCenter.y,
+    targetPosition: targetPos,
   });
 
   return (

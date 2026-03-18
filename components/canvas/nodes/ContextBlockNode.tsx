@@ -2,17 +2,21 @@
 
 import { memo, useCallback, useState } from "react";
 import {
+  Handle,
   NodeResizer,
+  Position,
   useReactFlow,
   useStore,
   type NodeProps,
   type ReactFlowState,
 } from "@xyflow/react";
 import { compileContext } from "@/lib/context-export";
-import ConnectorHandle from "./ConnectorHandle";
 import EditableTitle from "./EditableTitle";
 import type { ContextBlockData, SotNodeData } from "@/types";
 import type { Node } from "@xyflow/react";
+
+const selectIsConnecting = (state: ReactFlowState) =>
+  state.connection.inProgress;
 
 function selectConnectedSots(id: string) {
   return (state: ReactFlowState) => {
@@ -44,6 +48,7 @@ function ContextBlockNode({
     [id, setNodes],
   );
   const [copied, setCopied] = useState(false);
+  const isConnecting = useStore(selectIsConnecting);
   const sotNodes = useStore(selectConnectedSots(id));
 
   const tokenEstimate = sotNodes.reduce(
@@ -69,8 +74,19 @@ function ContextBlockNode({
         lineClassName="!border-transparent !border-[6px]"
         handleClassName="!w-2 !h-2 !bg-gray-300 !border-gray-300 !opacity-0 hover:!opacity-100"
       />
-      <ConnectorHandle type="target" />
-      <div className="flex h-full flex-col rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50/50 p-4 shadow-sm">
+      {/* Full-size invisible target handle — only active during edge drag */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!absolute !inset-0 !w-full !h-full !bg-transparent !border-0 !rounded-lg !transform-none context-drop-handle"
+        style={{
+          top: 0,
+          left: 0,
+          transform: "none",
+          pointerEvents: isConnecting ? "all" : "none",
+        }}
+      />
+      <div className="context-drop-content flex h-full flex-col rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50 p-4 shadow-sm transition-all duration-150">
         {/* Header */}
         <div className="mb-3 flex items-center justify-between">
           <EditableTitle

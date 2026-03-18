@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-/* Render edges and connection line behind nodes */
-
 /* Edge hover pulse & selection */
 .react-flow__edge .react-flow__edge-path {
   transition: stroke-width 0.2s ease, stroke 0.2s ease;
