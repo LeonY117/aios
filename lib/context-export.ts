@@ -1,5 +1,28 @@
+import TurndownService from "turndown";
 import type { Node } from "@xyflow/react";
 import type { SotNodeData, ChatNodeData } from "@/types";
+
+const turndown = new TurndownService({
+  headingStyle: "atx",
+  bulletListMarker: "-",
+});
+
+// Task list support: checkboxes → [ ] / [x]
+turndown.addRule("taskListItem", {
+  filter: (node) =>
+    node.nodeName === "LI" &&
+    node.getAttribute("data-type") === "taskItem",
+  replacement: (content, node) => {
+    const checked = (node as Element).getAttribute("data-checked") === "true";
+    return `${checked ? "[x]" : "[ ]"} ${content.trim()}\n`;
+  },
+});
+
+function htmlToMarkdown(html: string): string {
+  // If it doesn't look like HTML, return as-is
+  if (!html.includes("<")) return html;
+  return turndown.turndown(html);
+}
 
 type ContextNode = Node<SotNodeData> | Node<ChatNodeData>;
 
@@ -25,7 +48,7 @@ function nodeToSection(node: ContextNode): string {
   const lines: string[] = [`## Source: ${d.title}`];
   lines.push(`**Type:** ${d.sourceType}`);
   if (d.sourceUrl) lines.push(`**URL:** ${d.sourceUrl}`);
-  lines.push("", d.content);
+  lines.push("", htmlToMarkdown(d.content));
   return lines.join("\n");
 }
 

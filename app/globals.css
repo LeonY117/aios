@@ -7,3 +7,116 @@ body {
   padding: 0;
   height: 100%;
 }
+
+/* Tiptap editor styles */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9ca3af;
+  pointer-events: none;
+  height: 0;
+}
+
+.tiptap:focus {
+  outline: none;
+}
+
+.tiptap p {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.tiptap img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 0.5em 0;
+}
+
+/* Task list (todos) */
+.tiptap ul[data-type="taskList"] {
+  list-style: none !important;
+  padding-left: 0 !important;
+}
+
+.tiptap ul[data-type="taskList"] li::before,
+.tiptap ul[data-type="taskList"] li::marker {
+  content: none !important;
+  display: none !important;
+}
+
+.tiptap ul[data-type="taskList"] li {
+  position: relative;
+  padding-left: 1.25em !important;
+}
+
+.tiptap ul[data-type="taskList"] li > label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 1.5em;
+  display: flex;
+  align-items: center;
+}
+
+.tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #6366f1;
+}
+
+.tiptap ul[data-type="taskList"] li > div {
+  min-width: 0;
+}
+
+.tiptap ul[data-type="taskList"] li[data-checked="true"] > div > p {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+/* Normalize prose spacing on lists so they align with normal text */
+.tiptap ul,
+.tiptap ol,
+.tiptap ul[data-type="taskList"] {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-left: 1.25em !important;
+}
+
+.tiptap ul[data-type="taskList"] {
+  padding-left: 0 !important;
+}
+
+.tiptap li {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-left: 0 !important;
+  line-height: inherit !important;
+}
+
+.tiptap li > p,
+.tiptap li > div > p {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  line-height: inherit !important;
+}
+
+/* Blockquote — left line only, no quotation marks, same size as normal text */
+.tiptap blockquote {
+  quotes: none !important;
+  font-size: inherit !important;
+  font-style: normal !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.tiptap blockquote p {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.tiptap blockquote p::before,
+.tiptap blockquote p::after {
+  content: none !important;
+}

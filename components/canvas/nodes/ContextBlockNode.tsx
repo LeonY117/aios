@@ -1,15 +1,17 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import {
   Handle,
   NodeResizer,
   Position,
+  useReactFlow,
   useStore,
   type NodeProps,
   type ReactFlowState,
 } from "@xyflow/react";
 import { compileContext } from "@/lib/context-export";
+import EditableTitle from "./EditableTitle";
 import type { ContextBlockData, SotNodeData } from "@/types";
 import type { Node } from "@xyflow/react";
 
@@ -29,6 +31,19 @@ function ContextBlockNode({
   data,
   selected,
 }: NodeProps & { data: ContextBlockData }) {
+  const { setNodes } = useReactFlow();
+  const handleTitleChange = useCallback(
+    (title: string) => {
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === id
+            ? { ...n, data: { ...(n.data as ContextBlockData), title } }
+            : n,
+        ),
+      );
+    },
+    [id, setNodes],
+  );
   const [copied, setCopied] = useState(false);
   const sotNodes = useStore(selectConnectedSots(id));
 
@@ -63,9 +78,11 @@ function ContextBlockNode({
       <div className="flex h-full flex-col rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50/50 p-4 shadow-sm">
         {/* Header */}
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-indigo-900">
-            {data.title}
-          </h3>
+          <EditableTitle
+            title={data.title}
+            onChange={handleTitleChange}
+            className="text-sm font-semibold text-indigo-900"
+          />
           <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-indigo-100 text-indigo-600">
             context
           </span>

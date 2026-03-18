@@ -40,17 +40,7 @@ export default function WorkspaceSidebar({
     fetchSessions();
   }, [fetchSessions]);
 
-  // Cmd+B toggle
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "b") {
-        e.preventDefault();
-        setOpen((o) => !o);
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
+  // Sidebar toggle — avoid Cmd+B as it conflicts with bold in text editor
 
   // Focus inputs when shown
   useEffect(() => {

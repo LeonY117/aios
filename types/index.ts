@@ -4,6 +4,8 @@ export type SotNodeData = {
   sourceType: "notion" | "github" | "slack" | "url" | "chatgpt" | "manual";
   sourceUrl?: string;
   isLoading?: boolean;
+  isRichText?: boolean;
+  isEditing?: boolean;
 };
 
 export type ChatMessage = {

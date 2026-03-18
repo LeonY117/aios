@@ -1,15 +1,17 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import {
   Handle,
   NodeResizer,
   Position,
+  useReactFlow,
   type NodeProps,
 } from "@xyflow/react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import EditableTitle from "./EditableTitle";
 import type { ChatNodeData } from "@/types";
 
 function CodeBlock({
@@ -47,7 +49,24 @@ const sourceBadgeColors: Record<ChatNodeData["source"], string> = {
   manual: "bg-gray-600 text-white",
 };
 
-function ChatNode({ data, selected }: NodeProps & { data: ChatNodeData }) {
+function ChatNode({
+  id,
+  data,
+  selected,
+}: NodeProps & { data: ChatNodeData }) {
+  const { setNodes } = useReactFlow();
+  const handleTitleChange = useCallback(
+    (title: string) => {
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === id
+            ? { ...n, data: { ...(n.data as ChatNodeData), title } }
+            : n,
+        ),
+      );
+    },
+    [id, setNodes],
+  );
   if (data.isLoading) {
     return (
       <>
@@ -96,9 +115,10 @@ function ChatNode({ data, selected }: NodeProps & { data: ChatNodeData }) {
       <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3 min-w-0">
-          <h3 className="text-sm font-semibold text-gray-900 truncate">
-            {data.title}
-          </h3>
+          <EditableTitle
+            title={data.title}
+            onChange={handleTitleChange}
+          />
           <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500">
             {data.messages?.length ?? 0} msgs
           </span>

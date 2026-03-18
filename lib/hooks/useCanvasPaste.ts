@@ -15,6 +15,171 @@ const SOURCE_ENDPOINT: Record<string, string> = {
   claude: "/api/sources/claude",
 };
 
+/**
+ * Handles adding a URL-based node to the canvas.
+ * Shared between paste handler and toolbar link button.
+ */
+export function handleLinkAdd(
+  url: string,
+  position: { x: number; y: number },
+  setNodes: SetNodes,
+) {
+  const detection = detectSource(url);
+
+  if (detection.type === "manual") {
+    // Not a valid URL — create as plain text SOT
+    const title =
+      detection.text.length > 50
+        ? detection.text.slice(0, 50) + "…"
+        : detection.text;
+    const data: SotNodeData = {
+      title,
+      content: detection.text,
+      sourceType: "manual",
+    };
+    setNodes((nds) => [...nds, createSotNode(data, position)]);
+    return;
+  }
+
+  if (detection.type === "chatgpt" || detection.type === "claude") {
+    const source = detection.type;
+    const nodeId = crypto.randomUUID();
+    const loadingData: ChatNodeData = {
+      title: detection.url,
+      source,
+      messages: [],
+      isLoading: true,
+    };
+    setNodes((nds) => [
+      ...nds,
+      {
+        id: nodeId,
+        type: "chatWindow",
+        position,
+        data: loadingData,
+        style: { width: 380, height: 420 },
+      },
+    ]);
+
+    fetch(SOURCE_ENDPOINT[source], {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: detection.url }),
+    })
+      .then((res) => res.json())
+      .then((result) => {
+        const messages: ChatMessage[] = result.messages ?? [];
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === nodeId
+              ? {
+                  ...n,
+                  data: {
+                    title:
+                      result.title ??
+                      `${source === "chatgpt" ? "ChatGPT" : "Claude"} Conversation`,
+                    source,
+                    model: result.model,
+                    messages,
+                    isLoading: false,
+                  } satisfies ChatNodeData,
+                }
+              : n,
+          ),
+        );
+      })
+      .catch(() => {
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === nodeId
+              ? {
+                  ...n,
+                  data: {
+                    title: "Import Failed",
+                    source,
+                    messages: [
+                      {
+                        role: "assistant",
+                        content: `Failed to fetch or parse this ${source === "chatgpt" ? "ChatGPT" : "Claude"} conversation.`,
+                      },
+                    ],
+                    isLoading: false,
+                  } satisfies ChatNodeData,
+                }
+              : n,
+          ),
+        );
+      });
+    return;
+  }
+
+  // All other URL types → SOT card
+  const nodeId = crypto.randomUUID();
+  const sourceType = detection.type;
+  const endpoint = SOURCE_ENDPOINT[detection.type] ?? "/api/sources/url";
+  const loadingData: SotNodeData = {
+    title: detection.url,
+    content: "",
+    sourceType,
+    sourceUrl: detection.url,
+    isLoading: true,
+  };
+  setNodes((nds) => [
+    ...nds,
+    {
+      id: nodeId,
+      type: "sotCard",
+      position,
+      data: loadingData,
+      style: { width: 288, height: 320 },
+    },
+  ]);
+
+  fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: detection.url }),
+  })
+    .then((res) => res.json())
+    .then((result) => {
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                data: {
+                  title: result.title,
+                  content: result.content,
+                  sourceType: result.sourceType,
+                  sourceUrl: result.sourceUrl,
+                  isLoading: false,
+                } satisfies SotNodeData,
+              }
+            : n,
+        ),
+      );
+    })
+    .catch(() => {
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                data: {
+                  title: detection.url,
+                  content:
+                    "Failed to fetch or extract content from this URL.",
+                  sourceType,
+                  sourceUrl: detection.url,
+                  isLoading: false,
+                } satisfies SotNodeData,
+              }
+            : n,
+        ),
+      );
+    });
+}
+
 export function useCanvasPaste(setNodes: SetNodes) {
   const { screenToFlowPosition } = useReactFlow();
 
@@ -34,230 +199,8 @@ export function useCanvasPaste(setNodes: SetNodes) {
 
       e.preventDefault();
 
-      const detection = detectSource(text);
       const position = viewportCenter(screenToFlowPosition);
-
-      if (detection.type === "manual") {
-        const title =
-          detection.text.length > 50
-            ? detection.text.slice(0, 50) + "…"
-            : detection.text;
-        const data: SotNodeData = {
-          title,
-          content: detection.text,
-          sourceType: "manual",
-        };
-        setNodes((nds) => [...nds, createSotNode(data, position)]);
-        return;
-      }
-
-      if (detection.type === "chatgpt") {
-        // ChatGPT share links create chatWindow nodes
-        const nodeId = crypto.randomUUID();
-        const loadingData: ChatNodeData = {
-          title: detection.url,
-          source: "chatgpt",
-          messages: [],
-          isLoading: true,
-        };
-        setNodes((nds) => [
-          ...nds,
-          {
-            id: nodeId,
-            type: "chatWindow",
-            position,
-            data: loadingData,
-            style: { width: 380, height: 420 },
-          },
-        ]);
-
-        fetch(SOURCE_ENDPOINT.chatgpt, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: detection.url }),
-        })
-          .then((res) => res.json())
-          .then((result) => {
-            const messages: ChatMessage[] = result.messages ?? [];
-            setNodes((nds) =>
-              nds.map((n) =>
-                n.id === nodeId
-                  ? {
-                      ...n,
-                      data: {
-                        title: result.title ?? "ChatGPT Conversation",
-                        source: "chatgpt",
-                        model: result.model,
-                        messages,
-                        isLoading: false,
-                      } satisfies ChatNodeData,
-                    }
-                  : n,
-              ),
-            );
-          })
-          .catch(() => {
-            setNodes((nds) =>
-              nds.map((n) =>
-                n.id === nodeId
-                  ? {
-                      ...n,
-                      data: {
-                        title: "Import Failed",
-                        source: "chatgpt",
-                        messages: [
-                          {
-                            role: "assistant",
-                            content:
-                              "Failed to fetch or parse this ChatGPT conversation.",
-                          },
-                        ],
-                        isLoading: false,
-                      } satisfies ChatNodeData,
-                    }
-                  : n,
-              ),
-            );
-          });
-        return;
-      }
-
-      if (detection.type === "claude") {
-        // Claude share links — use Puppeteer-based server route to bypass Cloudflare
-        const nodeId = crypto.randomUUID();
-        const loadingData: ChatNodeData = {
-          title: detection.url,
-          source: "claude",
-          messages: [],
-          isLoading: true,
-        };
-        setNodes((nds) => [
-          ...nds,
-          {
-            id: nodeId,
-            type: "chatWindow",
-            position,
-            data: loadingData,
-            style: { width: 380, height: 420 },
-          },
-        ]);
-
-        fetch(SOURCE_ENDPOINT.claude, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: detection.url }),
-        })
-          .then((res) => res.json())
-          .then((result) => {
-            const messages: ChatMessage[] = result.messages ?? [];
-            setNodes((nds) =>
-              nds.map((n) =>
-                n.id === nodeId
-                  ? {
-                      ...n,
-                      data: {
-                        title: result.title ?? "Claude Conversation",
-                        source: "claude",
-                        model: result.model,
-                        messages,
-                        isLoading: false,
-                      } satisfies ChatNodeData,
-                    }
-                  : n,
-              ),
-            );
-          })
-          .catch(() => {
-            setNodes((nds) =>
-              nds.map((n) =>
-                n.id === nodeId
-                  ? {
-                      ...n,
-                      data: {
-                        title: "Import Failed",
-                        source: "claude",
-                        messages: [
-                          {
-                            role: "assistant",
-                            content:
-                              "Failed to fetch or parse this Claude conversation.",
-                          },
-                        ],
-                        isLoading: false,
-                      } satisfies ChatNodeData,
-                    }
-                  : n,
-              ),
-            );
-          });
-        return;
-      }
-
-      // All other URL types → SOT card
-      const nodeId = crypto.randomUUID();
-      const sourceType = detection.type;
-      const endpoint = SOURCE_ENDPOINT[detection.type] ?? "/api/sources/url";
-      const loadingData: SotNodeData = {
-        title: detection.url,
-        content: "",
-        sourceType,
-        sourceUrl: detection.url,
-        isLoading: true,
-      };
-      setNodes((nds) => [
-        ...nds,
-        {
-          id: nodeId,
-          type: "sotCard",
-          position,
-          data: loadingData,
-          style: { width: 288, height: 320 },
-        },
-      ]);
-
-      fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: detection.url }),
-      })
-        .then((res) => res.json())
-        .then((result) => {
-          setNodes((nds) =>
-            nds.map((n) =>
-              n.id === nodeId
-                ? {
-                    ...n,
-                    data: {
-                      title: result.title,
-                      content: result.content,
-                      sourceType: result.sourceType,
-                      sourceUrl: result.sourceUrl,
-                      isLoading: false,
-                    } satisfies SotNodeData,
-                  }
-                : n,
-            ),
-          );
-        })
-        .catch(() => {
-          setNodes((nds) =>
-            nds.map((n) =>
-              n.id === nodeId
-                ? {
-                    ...n,
-                    data: {
-                      title: detection.url,
-                      content:
-                        "Failed to fetch or extract content from this URL.",
-                      sourceType,
-                      sourceUrl: detection.url,
-                      isLoading: false,
-                    } satisfies SotNodeData,
-                  }
-                : n,
-            ),
-          );
-        });
+      handleLinkAdd(text, position, setNodes);
     },
     [screenToFlowPosition, setNodes],
   );

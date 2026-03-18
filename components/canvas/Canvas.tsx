@@ -21,8 +21,9 @@ import "@xyflow/react/dist/style.css";
 import SotCardNode from "./nodes/SotCardNode";
 import ChatNode from "./nodes/ChatNode";
 import ContextBlockNode from "./nodes/ContextBlockNode";
+import CanvasToolbar from "./CanvasToolbar";
 import WorkspaceSidebar from "@/components/WorkspaceSidebar";
-import { useCanvasPaste } from "@/lib/hooks/useCanvasPaste";
+import { useCanvasPaste, handleLinkAdd } from "@/lib/hooks/useCanvasPaste";
 import { viewportCenter } from "@/lib/nodes";
 import {
   loadSession,
@@ -34,7 +35,7 @@ import {
   getSessionName,
   debounce,
 } from "@/lib/persistence";
-import type { ContextBlockData } from "@/types";
+import type { ContextBlockData, SotNodeData } from "@/types";
 
 const nodeTypes = {
   sotCard: SotCardNode,
@@ -242,6 +243,33 @@ function CanvasInner() {
     [setEdges, triggerDebouncedSave, loaded],
   );
 
+  const addTextBlock = useCallback(() => {
+    const position = viewportCenter(screenToFlowPosition);
+    const data: SotNodeData = {
+      title: "Untitled",
+      content: "",
+      sourceType: "manual",
+      isRichText: true,
+      isEditing: true,
+    };
+    const node: Node = {
+      id: crypto.randomUUID(),
+      type: "sotCard",
+      position,
+      data,
+      style: { width: 380, height: 360 },
+    };
+    setNodes((nds) => [...nds, node]);
+  }, [screenToFlowPosition, setNodes]);
+
+  const addLink = useCallback(
+    (url: string) => {
+      const position = viewportCenter(screenToFlowPosition);
+      handleLinkAdd(url, position, setNodes);
+    },
+    [screenToFlowPosition, setNodes],
+  );
+
   const addContextBlock = useCallback(() => {
     const position = viewportCenter(screenToFlowPosition);
     const data: ContextBlockData = { title: "Context Block" };
@@ -274,6 +302,7 @@ function CanvasInner() {
       >
         <Background variant={BackgroundVariant.Dots} />
       </ReactFlow>
+      <CanvasToolbar onAddText={addTextBlock} onAddLink={addLink} />
       <WorkspaceSidebar
         currentSession={currentSession}
         onSwitch={handleSwitch}
