@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { Client } from "@notionhq/client";
-import type { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { NotionToMarkdown } from "notion-to-md";
 
 // Notion URLs contain a 32-char hex ID (with or without dashes)
@@ -53,21 +52,6 @@ export async function POST(request: Request) {
   const n2m = new NotionToMarkdown({
     notionClient: notion,
     config: { parseChildPages: false },
-  });
-
-  n2m.setCustomTransformer("toggle", async (block) => {
-    const typedBlock = block as BlockObjectResponse;
-    if (typedBlock.type !== "toggle") return "";
-
-    const { toggle } = typedBlock;
-    const summary =
-      toggle.rich_text?.map((t) => t.plain_text).join("") || "Toggle";
-    const children = toggle.children
-      ? await Promise.all(
-          toggle.children.map((child) => n2m.blockToMarkdown(child)),
-        )
-      : [];
-    return `<details>\n<summary>${summary}</summary>\n\n${children.join("\n")}\n</details>`;
   });
 
   try {
