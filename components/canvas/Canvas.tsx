@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -9,147 +9,81 @@ import {
   useNodesState,
   useEdgesState,
   useReactFlow,
+  addEdge,
   type Node,
+  type Connection,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import SotCardNode from "./nodes/SotCardNode";
-import { detectSource } from "@/lib/sources/detect";
-import { createSotNode, viewportCenter } from "@/lib/nodes";
-import type { SotNodeData } from "@/types";
+import ChatNode from "./nodes/ChatNode";
+import ContextBlockNode from "./nodes/ContextBlockNode";
+import { useCanvasPaste } from "@/lib/hooks/useCanvasPaste";
+import { viewportCenter } from "@/lib/nodes";
+import type { ContextBlockData } from "@/types";
 
-const nodeTypes = { sotCard: SotCardNode };
-
-const SOURCE_ENDPOINT: Record<string, string> = {
-  github: "/api/sources/github",
-  notion: "/api/sources/notion",
-  url: "/api/sources/url",
-  chatgpt: "/api/sources/url", // Phase 4 adds dedicated handler
+const nodeTypes = {
+  sotCard: SotCardNode,
+  chatWindow: ChatNode,
+  contextBlock: ContextBlockNode,
 };
 
 function CanvasInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
-  const [edges, , onEdgesChange] = useEdgesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { screenToFlowPosition } = useReactFlow();
 
-  const handlePaste = useCallback(
-    (e: ClipboardEvent) => {
-      const active = document.activeElement;
-      if (
-        active instanceof HTMLInputElement ||
-        active instanceof HTMLTextAreaElement ||
-        (active instanceof HTMLElement && active.isContentEditable)
-      ) {
-        return;
-      }
+  useCanvasPaste(setNodes);
 
-      const text = e.clipboardData?.getData("text/plain");
-      if (!text) return;
-
-      e.preventDefault();
-
-      const detection = detectSource(text);
-      const position = viewportCenter(screenToFlowPosition);
-
-      if (detection.type === "manual") {
-        const title =
-          detection.text.length > 50
-            ? detection.text.slice(0, 50) + "…"
-            : detection.text;
-        const data: SotNodeData = {
-          title,
-          content: detection.text,
-          sourceType: "manual",
-        };
-        setNodes((nds) => [...nds, createSotNode(data, position)]);
-      } else {
-        const nodeId = crypto.randomUUID();
-        const sourceType: SotNodeData["sourceType"] =
-          detection.type === "chatgpt" ? "url" : detection.type;
-        const endpoint = SOURCE_ENDPOINT[detection.type] ?? "/api/sources/url";
-        const loadingData: SotNodeData = {
-          title: detection.url,
-          content: "",
-          sourceType,
-          sourceUrl: detection.url,
-          isLoading: true,
-        };
-        setNodes((nds) => [
-          ...nds,
-          { id: nodeId, type: "sotCard", position, data: loadingData, style: { width: 288, height: 320 } },
-        ]);
-
-        fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: detection.url }),
-        })
-          .then((res) => res.json())
-          .then((result) => {
-            setNodes((nds) =>
-              nds.map((n) =>
-                n.id === nodeId
-                  ? {
-                      ...n,
-                      data: {
-                        title: result.title,
-                        content: result.content,
-                        sourceType: result.sourceType,
-                        sourceUrl: result.sourceUrl,
-                        isLoading: false,
-                      } satisfies SotNodeData,
-                    }
-                  : n,
-              ),
-            );
-          })
-          .catch(() => {
-            setNodes((nds) =>
-              nds.map((n) =>
-                n.id === nodeId
-                  ? {
-                      ...n,
-                      data: {
-                        title: detection.url,
-                        content:
-                          "Failed to fetch or extract content from this URL.",
-                        sourceType,
-                        sourceUrl: detection.url,
-                        isLoading: false,
-                      } satisfies SotNodeData,
-                    }
-                  : n,
-              ),
-            );
-          });
-      }
-    },
-    [screenToFlowPosition, setNodes],
+  const onConnect = useCallback(
+    (connection: Connection) => setEdges((eds) => addEdge(connection, eds)),
+    [setEdges],
   );
 
-  useEffect(() => {
-    document.addEventListener("paste", handlePaste);
-    return () => document.removeEventListener("paste", handlePaste);
-  }, [handlePaste]);
+  const addContextBlock = useCallback(() => {
+    const position = viewportCenter(screenToFlowPosition);
+    const data: ContextBlockData = { title: "Context Block" };
+    const node: Node = {
+      id: crypto.randomUUID(),
+      type: "contextBlock",
+      position,
+      data,
+      style: { width: 280, height: 280 },
+    };
+    setNodes((nds) => [...nds, node]);
+  }, [screenToFlowPosition, setNodes]);
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      nodeTypes={nodeTypes}
-      minZoom={0.25}
-      maxZoom={2}
-    >
-      <Background variant={BackgroundVariant.Dots} />
-    </ReactFlow>
+    <>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        nodeTypes={nodeTypes}
+        defaultEdgeOptions={{
+          type: "smoothstep",
+          style: { stroke: "#94a3b8" },
+        }}
+        minZoom={0.25}
+        maxZoom={2}
+      >
+        <Background variant={BackgroundVariant.Dots} />
+      </ReactFlow>
+      <button
+        onClick={addContextBlock}
+        className="absolute bottom-6 right-6 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-lg hover:bg-indigo-600 transition-colors"
+      >
+        + Context Block
+      </button>
+    </>
   );
 }
 
 export default function Canvas() {
   return (
-    <div className="w-screen h-dvh">
+    <div className="relative w-screen h-dvh">
       <ReactFlowProvider>
         <CanvasInner />
       </ReactFlowProvider>

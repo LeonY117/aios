@@ -1,7 +1,25 @@
 export type SotNodeData = {
   title: string;
   content: string;
-  sourceType: "notion" | "github" | "url" | "manual";
+  sourceType: "notion" | "github" | "url" | "chatgpt" | "manual";
   sourceUrl?: string;
   isLoading?: boolean;
+};
+
+export type ChatMessage = {
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp?: number;
+};
+
+export type ChatNodeData = {
+  title: string;
+  source: "chatgpt" | "claude" | "manual";
+  model?: string;
+  messages: ChatMessage[];
+  isLoading?: boolean;
+};
+
+export type ContextBlockData = {
+  title: string;
 };
