@@ -2,15 +2,14 @@
 
 import { memo, useCallback } from "react";
 import {
-  Handle,
   NodeResizer,
-  Position,
   useReactFlow,
   type NodeProps,
 } from "@xyflow/react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import RichTextEditor from "../RichTextEditor";
+import ConnectorHandle from "./ConnectorHandle";
 import EditableTitle from "./EditableTitle";
 import type { SotNodeData } from "@/types";
 
@@ -89,7 +88,7 @@ function SotCardNode({
           lineClassName="!border-transparent !border-[6px]"
           handleClassName="!w-2 !h-2 !bg-gray-300 !border-gray-300 !opacity-0 hover:!opacity-100"
         />
-        <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-gray-300 !border-gray-400 opacity-0 hover:opacity-100 transition-opacity" />
+        <ConnectorHandle type="source" />
         <LoadingSkeleton data={data} />
       </>
     );
@@ -104,7 +103,7 @@ function SotCardNode({
         lineClassName="!border-transparent !border-[6px]"
         handleClassName="!w-2 !h-2 !bg-gray-300 !border-gray-300 !opacity-0 hover:!opacity-100"
       />
-      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-gray-300 !border-gray-400 opacity-0 hover:opacity-100 transition-opacity" />
+      <ConnectorHandle type="source" />
       <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-3 pb-2">

@@ -2,15 +2,14 @@
 
 import { memo, useCallback, useState } from "react";
 import {
-  Handle,
   NodeResizer,
-  Position,
   useReactFlow,
   useStore,
   type NodeProps,
   type ReactFlowState,
 } from "@xyflow/react";
 import { compileContext } from "@/lib/context-export";
+import ConnectorHandle from "./ConnectorHandle";
 import EditableTitle from "./EditableTitle";
 import type { ContextBlockData, SotNodeData } from "@/types";
 import type { Node } from "@xyflow/react";
@@ -70,11 +69,7 @@ function ContextBlockNode({
         lineClassName="!border-transparent !border-[6px]"
         handleClassName="!w-2 !h-2 !bg-gray-300 !border-gray-300 !opacity-0 hover:!opacity-100"
       />
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="!w-3 !h-3 !bg-indigo-400 !border-indigo-500"
-      />
+      <ConnectorHandle type="target" />
       <div className="flex h-full flex-col rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50/50 p-4 shadow-sm">
         {/* Header */}
         <div className="mb-3 flex items-center justify-between">

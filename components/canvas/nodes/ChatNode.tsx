@@ -2,15 +2,14 @@
 
 import { memo, useCallback } from "react";
 import {
-  Handle,
   NodeResizer,
-  Position,
   useReactFlow,
   type NodeProps,
 } from "@xyflow/react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import ConnectorHandle from "./ConnectorHandle";
 import EditableTitle from "./EditableTitle";
 import type { ChatNodeData } from "@/types";
 
@@ -77,11 +76,7 @@ function ChatNode({
           lineClassName="!border-transparent !border-[6px]"
           handleClassName="!w-2 !h-2 !bg-gray-300 !border-gray-300 !opacity-0 hover:!opacity-100"
         />
-        <Handle
-          type="source"
-          position={Position.Right}
-          className="!w-2 !h-2 !bg-gray-300 !border-gray-400 opacity-0 hover:opacity-100 transition-opacity"
-        />
+        <ConnectorHandle type="source" />
         <div className="h-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-900 truncate">
@@ -107,11 +102,7 @@ function ChatNode({
         lineClassName="!border-transparent !border-[6px]"
         handleClassName="!w-2 !h-2 !bg-gray-300 !border-gray-300 !opacity-0 hover:!opacity-100"
       />
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="!w-2 !h-2 !bg-gray-300 !border-gray-400 opacity-0 hover:opacity-100 transition-opacity"
-      />
+      <ConnectorHandle type="source" />
       <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3 min-w-0">

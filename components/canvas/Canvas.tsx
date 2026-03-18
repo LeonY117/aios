@@ -22,6 +22,8 @@ import SotCardNode from "./nodes/SotCardNode";
 import ChatNode from "./nodes/ChatNode";
 import ContextBlockNode from "./nodes/ContextBlockNode";
 import LinkInputNode from "./nodes/LinkInputNode";
+import CenterEdge from "./edges/CenterEdge";
+import CenterConnectionLine from "./edges/CenterConnectionLine";
 import CanvasToolbar from "./CanvasToolbar";
 import WorkspaceSidebar from "@/components/WorkspaceSidebar";
 import { useCanvasPaste } from "@/lib/hooks/useCanvasPaste";
@@ -43,6 +45,10 @@ const nodeTypes = {
   chatWindow: ChatNode,
   contextBlock: ContextBlockNode,
   linkInput: LinkInputNode,
+};
+
+const edgeTypes = {
+  center: CenterEdge,
 };
 
 type SaveStatus = "idle" | "saving" | "saved";
@@ -299,10 +305,12 @@ function CanvasInner() {
         onConnect={onConnect}
         onViewportChange={onViewportChange}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         defaultEdgeOptions={{
-          type: "smoothstep",
+          type: "center",
           style: { stroke: "#94a3b8" },
         }}
+        connectionLineComponent={CenterConnectionLine}
         minZoom={0.25}
         maxZoom={2}
       >
@@ -328,6 +336,11 @@ function CanvasInner() {
 export default function Canvas() {
   return (
     <div className="relative w-screen h-dvh">
+      {/* Override library z-index so edges/connection line render behind nodes */}
+      <style>{`
+        svg.react-flow__connectionline { z-index: -1 !important; }
+        .react-flow .react-flow__edges { z-index: -1 !important; }
+      `}</style>
       <ReactFlowProvider>
         <CanvasInner />
       </ReactFlowProvider>
