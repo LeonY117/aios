@@ -70,14 +70,14 @@ function ChatNode({
     return (
       <>
         <NodeResizer
-          isVisible={selected}
+          isVisible
           minWidth={300}
           minHeight={200}
-          lineClassName="!border-transparent !border-[6px]"
-          handleClassName="!w-2 !h-2 !bg-gray-300 !border-gray-300 !opacity-0 hover:!opacity-100"
+          lineClassName="!border-transparent !border-[3px]"
+          handleClassName="!hidden"
         />
         <ConnectorHandle type="source" />
-        <div className="h-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="h-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-gray-300">
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-900 truncate">
               Loading conversation…
@@ -96,14 +96,14 @@ function ChatNode({
   return (
     <>
       <NodeResizer
-        isVisible={selected}
+        isVisible
         minWidth={300}
         minHeight={200}
-        lineClassName="!border-transparent !border-[6px]"
-        handleClassName="!w-2 !h-2 !bg-gray-300 !border-gray-300 !opacity-0 hover:!opacity-100"
+        lineClassName="!border-transparent !border-[3px]"
+        handleClassName="!hidden"
       />
       <ConnectorHandle type="source" />
-      <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
+      <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm transition-colors duration-150 hover:border-gray-300">
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3 min-w-0">
           <EditableTitle

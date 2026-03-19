@@ -24,7 +24,7 @@ const sourceBadgeColors: Record<SotNodeData["sourceType"], string> = {
 
 function LoadingSkeleton({ data }: { data: SotNodeData }) {
   return (
-    <div className="h-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="h-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-gray-300">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900 truncate">
           {data.title}
@@ -82,11 +82,11 @@ function SotCardNode({
     return (
       <>
         <NodeResizer
-          isVisible={selected}
+          isVisible
           minWidth={240}
           minHeight={120}
-          lineClassName="!border-transparent !border-[6px]"
-          handleClassName="!w-2 !h-2 !bg-gray-300 !border-gray-300 !opacity-0 hover:!opacity-100"
+          lineClassName="!border-transparent !border-[3px]"
+          handleClassName="!hidden"
         />
         <ConnectorHandle type="source" />
         <LoadingSkeleton data={data} />
@@ -97,14 +97,14 @@ function SotCardNode({
   return (
     <>
       <NodeResizer
-        isVisible={selected}
+        isVisible
         minWidth={240}
         minHeight={120}
-        lineClassName="!border-transparent !border-[6px]"
-        handleClassName="!w-2 !h-2 !bg-gray-300 !border-gray-300 !opacity-0 hover:!opacity-100"
+        lineClassName="!border-transparent !border-[3px]"
+        handleClassName="!hidden"
       />
       <ConnectorHandle type="source" />
-      <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
+      <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm transition-colors duration-150 hover:border-gray-300">
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <EditableTitle

@@ -33,8 +33,8 @@ function LinkInputNode({
         isVisible={selected}
         minWidth={320}
         minHeight={140}
-        lineClassName="!border-transparent !border-[6px]"
-        handleClassName="!w-2 !h-2 !bg-gray-300 !border-gray-300 !opacity-0 hover:!opacity-100"
+        lineClassName="!border-transparent !border-[6px] hover:!border-blue-200 !transition-colors !duration-150"
+        handleClassName="!w-3 !h-3 !bg-blue-400 !border-blue-400 !rounded-full !opacity-0 hover:!opacity-100 !transition-opacity !duration-150"
       />
       <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center gap-2">

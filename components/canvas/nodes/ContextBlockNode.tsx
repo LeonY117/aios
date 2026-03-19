@@ -68,11 +68,11 @@ function ContextBlockNode({
   return (
     <>
       <NodeResizer
-        isVisible={selected}
+        isVisible
         minWidth={240}
         minHeight={160}
-        lineClassName="!border-transparent !border-[6px]"
-        handleClassName="!w-2 !h-2 !bg-gray-300 !border-gray-300 !opacity-0 hover:!opacity-100"
+        lineClassName="!border-transparent !border-[3px]"
+        handleClassName="!hidden"
       />
       {/* Full-size invisible target handle — only active during edge drag */}
       <Handle
@@ -86,7 +86,7 @@ function ContextBlockNode({
           pointerEvents: isConnecting ? "all" : "none",
         }}
       />
-      <div className="context-drop-content flex h-full flex-col rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50 p-4 shadow-sm transition-all duration-150">
+      <div className="context-drop-content flex h-full flex-col rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50 p-4 shadow-sm transition-all duration-150 hover:border-indigo-400">
         {/* Header */}
         <div className="mb-3 flex items-center justify-between">
           <EditableTitle
