@@ -19,12 +19,12 @@ export default function ConnectorHandle({
       {...props}
       className="!w-10 !h-10 !bg-transparent !border-0 !rounded-full !cursor-pointer connector-handle"
       style={{
-        top: "auto",
-        bottom: "-12px",
+        top: "50%",
+        bottom: "auto",
         ...(isTarget
           ? { left: "-12px", right: "auto" }
           : { right: "-12px", left: "auto" }),
-        transform: "none",
+        transform: "translateY(-50%)",
       }}
     >
       <div
