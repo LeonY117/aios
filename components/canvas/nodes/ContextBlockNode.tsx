@@ -86,9 +86,14 @@ function ContextBlockNode({
           pointerEvents: isConnecting ? "all" : "none",
         }}
       />
-      <div className="context-drop-content flex h-full flex-col rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50 p-4 shadow-sm transition-all duration-150 hover:border-indigo-400">
+      <div className="context-drop-content flex h-full flex-col rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50 shadow-sm transition-all duration-150 hover:border-indigo-400">
+        {/* Drag handle */}
+        <div className="flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
+          <div className="h-[3px] w-6 rounded-full bg-indigo-200" />
+        </div>
+
         {/* Header */}
-        <div className="mb-3 flex items-start justify-between">
+        <div className="mb-3 flex items-start justify-between px-4">
           <EditableTitle
             title={data.title}
             onChange={handleTitleChange}
@@ -100,7 +105,7 @@ function ContextBlockNode({
         </div>
 
         {/* Connected sources list */}
-        <div className="min-h-0 flex-1 overflow-y-auto nowheel">
+        <div className="min-h-0 flex-1 overflow-y-auto nowheel px-4">
           {sotNodes.length === 0 ? (
             <p className="text-xs text-gray-400 italic">
               Drag SOT connections here to build context
@@ -126,7 +131,7 @@ function ContextBlockNode({
         </div>
 
         {/* Footer */}
-        <div className="mt-3 flex items-center justify-between">
+        <div className="mt-3 flex items-center justify-between px-4 pb-4">
           <span className="text-[10px] text-gray-400">
             {sotNodes.length} source{sotNodes.length !== 1 ? "s" : ""}
             {tokenCount > 0 && ` · ~${tokenCount.toLocaleString()} tokens`}

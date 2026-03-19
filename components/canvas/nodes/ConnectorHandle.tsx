@@ -22,8 +22,8 @@ export default function ConnectorHandle({
         top: "50%",
         bottom: "auto",
         ...(isTarget
-          ? { left: "-12px", right: "auto" }
-          : { right: "-12px", left: "auto" }),
+          ? { left: "-20px", right: "auto" }
+          : { right: "-20px", left: "auto" }),
         transform: "translateY(-50%)",
       }}
     >
@@ -42,7 +42,7 @@ export default function ConnectorHandle({
           height="14"
           viewBox="0 0 14 14"
           fill="none"
-          className={isTarget ? "text-indigo-400" : "text-gray-400"}
+          className={isTarget ? "text-indigo-400" : "text-gray-300"}
         >
           <path
             d="M7 2v10M2 7h10"

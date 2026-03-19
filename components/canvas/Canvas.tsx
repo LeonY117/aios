@@ -265,7 +265,7 @@ function CanvasInner() {
       type: "sotCard",
       position,
       data,
-      style: { width: 380, height: 360 },
+      style: { width: 280, height: 360 },
     };
     setNodes((nds) => [...nds, node]);
   }, [screenToFlowPosition, setNodes]);

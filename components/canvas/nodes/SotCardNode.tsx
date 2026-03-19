@@ -43,7 +43,7 @@ function LoadingSkeleton({ data }: { data: SotNodeData }) {
         <span
           className={`ml-2 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${sourceBadgeColors[data.sourceType]}`}
         >
-          {data.sourceType}
+          {data.sourceType === "manual" ? "note" : data.sourceType}
         </span>
       </div>
       <div className="space-y-2">
@@ -163,18 +163,25 @@ function SotCardNode({
       />
       <ConnectorHandle type="source" />
       <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm transition-colors duration-150 hover:border-gray-300">
-        {/* Header */}
-        <div className="flex items-start justify-between px-4 pt-3 pb-2">
-          <EditableTitle
-            title={data.title}
-            onChange={handleTitleChange}
-          />
-          <span
-            className={`ml-2 mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${sourceBadgeColors[data.sourceType]}`}
-          >
-            {data.sourceType}
-          </span>
+        {/* Drag handle */}
+        <div className="flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
+          <div className="h-[3px] w-6 rounded-full bg-gray-200" />
         </div>
+
+        {/* Header */}
+        {!isRichText && (
+          <div className="flex items-start justify-between px-4 pb-2">
+            <EditableTitle
+              title={data.title}
+              onChange={handleTitleChange}
+            />
+            <span
+              className={`ml-2 mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${sourceBadgeColors[data.sourceType]}`}
+            >
+              {data.sourceType === "manual" ? "note" : data.sourceType}
+            </span>
+          </div>
+        )}
 
         {/* Content */}
         {isRichText ? (
@@ -183,7 +190,6 @@ function SotCardNode({
               content={data.content}
               onChange={handleContentChange}
               autoFocus={!!data.isEditing}
-              selected={selected}
               renderActions={() => (
                 <button
                   type="button"
