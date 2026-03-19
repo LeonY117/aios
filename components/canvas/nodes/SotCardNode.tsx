@@ -11,7 +11,9 @@ import rehypeRaw from "rehype-raw";
 import RichTextEditor from "../RichTextEditor";
 import ConnectorHandle from "./ConnectorHandle";
 import EditableTitle from "./EditableTitle";
+import { compileSingleContext } from "@/lib/context-export";
 import type { SotNodeData } from "@/types";
+import type { Node } from "@xyflow/react";
 
 const SOURCE_ENDPOINT: Record<string, string> = {
   github: "/api/sources/github",
@@ -61,7 +63,16 @@ function SotCardNode({
   const { setNodes } = useReactFlow();
   const isRichText = data.sourceType === "manual" && data.isRichText;
   const [linkCopied, setLinkCopied] = useState(false);
+  const [contextCopied, setContextCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  const handleCopyContext = useCallback(() => {
+    const fakeNode = { id, data } as Node<SotNodeData>;
+    const text = compileSingleContext(fakeNode);
+    navigator.clipboard.writeText(text);
+    setContextCopied(true);
+    setTimeout(() => setContextCopied(false), 2000);
+  }, [id, data]);
 
   const handleCopyLink = useCallback(() => {
     if (!data.sourceUrl) return;
@@ -176,49 +187,65 @@ function SotCardNode({
             />
           </div>
         ) : (
-          <>
-            <div className="nowheel min-h-0 flex-1 overflow-y-auto px-4 pb-3 text-xs leading-relaxed text-gray-600 prose prose-xs prose-gray">
-              <ReactMarkdown rehypePlugins={[rehypeRaw]}>{data.content}</ReactMarkdown>
-            </div>
-            {/* Bottom bar */}
-            <div className="flex h-[26px] shrink-0 items-center gap-1 border-t border-gray-100 px-2">
-              {data.sourceUrl && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleCopyLink}
-                    title="Copy source link"
-                    className="nodrag rounded p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                  >
-                    {linkCopied ? (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    ) : (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                      </svg>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleRefresh}
-                    title="Refresh content"
-                    className={`nodrag rounded p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer ${refreshing ? "animate-spin" : ""}`}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="23 4 23 10 17 10" />
-                      <polyline points="1 20 1 14 7 14" />
-                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
-                      <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
-                    </svg>
-                  </button>
-                </>
-              )}
-            </div>
-          </>
+          <div className="nowheel min-h-0 flex-1 overflow-y-auto px-4 pb-3 text-xs leading-relaxed text-gray-600 prose prose-xs prose-gray">
+            <ReactMarkdown rehypePlugins={[rehypeRaw]}>{data.content}</ReactMarkdown>
+          </div>
         )}
+
+        {/* Bottom bar */}
+        <div className="flex h-[26px] shrink-0 items-center gap-1 border-t border-gray-100 px-2">
+          <button
+            type="button"
+            onClick={handleCopyContext}
+            title="Copy as context"
+            className="nodrag rounded p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+          >
+            {contextCopied ? (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+            )}
+          </button>
+          {data.sourceUrl && (
+            <>
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                title="Copy source link"
+                className="nodrag rounded p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              >
+                {linkCopied ? (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                title="Refresh content"
+                className={`nodrag rounded p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer ${refreshing ? "animate-spin" : ""}`}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10" />
+                  <polyline points="1 20 1 14 7 14" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+                  <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
+                </svg>
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </>
   );

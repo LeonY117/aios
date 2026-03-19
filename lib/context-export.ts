@@ -52,6 +52,10 @@ function nodeToSection(node: ContextNode): string {
   return lines.join("\n");
 }
 
+export function compileSingleContext(node: ContextNode): string {
+  return nodeToSection(node);
+}
+
 export function compileContext(nodes: ContextNode[]): string {
   if (nodes.length === 0) return "";
 
