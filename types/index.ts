@@ -14,13 +14,25 @@ export type ChatMessage = {
   timestamp?: number;
 };
 
+export type AttachedSot = {
+  nodeId: string;
+  title: string;
+  content: string;
+  sourceType: string;
+  color: string;
+};
+
 export type ChatNodeData = {
   title: string;
-  source: "chatgpt" | "claude" | "manual";
+  source: "chatgpt" | "claude" | "manual" | "interactive";
   model?: string;
+  modelId?: string;
   messages: ChatMessage[];
   sourceUrl?: string;
   isLoading?: boolean;
+  isStreaming?: boolean;
+  webSearch?: boolean;
+  attachedSots?: AttachedSot[];
 };
 
 export type ContextBlockData = {

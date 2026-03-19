@@ -32,7 +32,6 @@ function selectConnectedSots(id: string) {
 function ContextBlockNode({
   id,
   data,
-  selected,
 }: NodeProps & { data: ContextBlockData }) {
   const { setNodes } = useReactFlow();
   const handleTitleChange = useCallback(

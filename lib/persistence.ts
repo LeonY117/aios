@@ -54,6 +54,7 @@ function stripContent(node: Node): Node {
   delete data.content;
   delete data.messages;
   delete data.isLoading;
+  delete data.isStreaming;
   return { ...node, data };
 }
 

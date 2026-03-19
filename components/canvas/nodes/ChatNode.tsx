@@ -1,6 +1,12 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   NodeResizer,
   useReactFlow,
@@ -12,30 +18,28 @@ import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import ConnectorHandle from "./ConnectorHandle";
 import EditableTitle from "./EditableTitle";
 import { compileSingleContext } from "@/lib/context-export";
-import type { ChatNodeData, ChatMessage } from "@/types";
+import { ALL_MODELS, DEFAULT_MODEL_ID, getModelName } from "@/lib/ai/models-client";
+import type { ChatNodeData, ChatMessage, AttachedSot } from "@/types";
 import type { Node } from "@xyflow/react";
 
-const SOURCE_ENDPOINT: Record<string, string> = {
-  chatgpt: "/api/sources/chatgpt",
-  claude: "/api/sources/claude",
-};
+// ---------------------------------------------------------------------------
+// Shared sub-components
+// ---------------------------------------------------------------------------
 
 function CodeBlock({
   className,
   children,
-  ...props
-}: { className?: string; children?: React.ReactNode }) {
+}: {
+  className?: string;
+  children?: React.ReactNode;
+}) {
   const match = /language-(\w+)/.exec(className || "");
   const inline =
     !className &&
     typeof children === "string" &&
     !children.includes("\n");
   if (inline) {
-    return (
-      <code className={className} {...props}>
-        {children}
-      </code>
-    );
+    return <code className={className}>{children}</code>;
   }
   return (
     <SyntaxHighlighter
@@ -49,7 +53,324 @@ function CodeBlock({
   );
 }
 
-const sourceBadgeColors: Record<ChatNodeData["source"], string> = {
+const SOURCE_ENDPOINT: Record<string, string> = {
+  chatgpt: "/api/sources/chatgpt",
+  claude: "/api/sources/claude",
+};
+
+const SOT_COLORS = [
+  "bg-purple-400",
+  "bg-blue-400",
+  "bg-green-400",
+  "bg-amber-400",
+  "bg-rose-400",
+  "bg-cyan-400",
+];
+
+// ---------------------------------------------------------------------------
+// Model selector dropdown
+// ---------------------------------------------------------------------------
+
+function ModelSelector({
+  modelId,
+  onChange,
+  disabled,
+}: {
+  modelId: string;
+  onChange: (id: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as HTMLElement)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen(!open)}
+        className={`nodrag flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] transition-colors ${
+          disabled
+            ? "text-gray-400 cursor-not-allowed"
+            : "text-gray-500 hover:bg-gray-100 cursor-pointer"
+        } ${open ? "bg-gray-100" : ""}`}
+      >
+        {getModelName(modelId)}
+        {!disabled && (
+          <svg
+            width="8"
+            height="8"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points={open ? "6 15 12 9 18 15" : "6 9 12 15 18 9"} />
+          </svg>
+        )}
+      </button>
+      {open && (
+        <div className="absolute bottom-full left-0 mb-1 w-44 rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-50">
+          {ALL_MODELS.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => {
+                onChange(m.id);
+                setOpen(false);
+              }}
+              className={`w-full flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 ${
+                m.id === modelId ? "bg-gray-50 font-medium" : ""
+              }`}
+            >
+              {m.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Context bar
+// ---------------------------------------------------------------------------
+
+function ContextBar({
+  sots,
+  collapsed,
+  onToggle,
+  onRemove,
+}: {
+  sots: AttachedSot[];
+  collapsed: boolean;
+  onToggle: () => void;
+  onRemove: (nodeId: string) => void;
+}) {
+  if (sots.length === 0) return null;
+
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        className="nodrag shrink-0 flex items-center gap-1.5 border-b border-gray-100 bg-gray-50/30 px-3 py-1.5 hover:bg-gray-50 transition-colors w-full text-left cursor-pointer"
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+        </svg>
+        <span className="text-[10px] font-medium text-gray-400">
+          {sots.length} source{sots.length !== 1 ? "s" : ""} attached
+        </span>
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-auto">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+    );
+  }
+
+  return (
+    <div className="shrink-0 border-b border-gray-100 bg-gray-50/50 px-3 py-2">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="nodrag flex items-center gap-1.5 mb-1.5 cursor-pointer"
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+        </svg>
+        <span className="text-[10px] font-medium text-gray-400">Attached context</span>
+      </button>
+      <div className="flex flex-wrap gap-1.5">
+        {sots.map((sot) => (
+          <div
+            key={sot.nodeId}
+            className="nodrag flex items-center gap-1 rounded-md bg-white border border-gray-200 pl-1.5 pr-1 py-0.5 shadow-sm"
+          >
+            <div className={`w-1.5 h-1.5 rounded-full ${sot.color}`} />
+            <span className="text-[10px] font-medium text-gray-600">
+              {sot.title}
+            </span>
+            <button
+              type="button"
+              onClick={() => onRemove(sot.nodeId)}
+              className="text-gray-300 hover:text-gray-500 ml-0.5 cursor-pointer"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Composer (input area)
+// ---------------------------------------------------------------------------
+
+function Composer({
+  modelId,
+  webSearch,
+  isStreaming,
+  onSend,
+  onStop,
+  onModelChange,
+  onWebSearchToggle,
+}: {
+  modelId: string;
+  webSearch: boolean;
+  isStreaming: boolean;
+  onSend: (text: string) => void;
+  onStop: () => void;
+  onModelChange: (id: string) => void;
+  onWebSearchToggle: () => void;
+}) {
+  const [input, setInput] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustHeight = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  }, []);
+
+  const handleInput = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setInput(e.target.value);
+      adjustHeight();
+    },
+    [adjustHeight],
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && !e.shiftKey && !isStreaming) {
+        e.preventDefault();
+        const text = input.trim();
+        if (!text) return;
+        setInput("");
+        // Reset height on next tick
+        requestAnimationFrame(() => {
+          if (textareaRef.current) {
+            textareaRef.current.style.height = "auto";
+          }
+        });
+        onSend(text);
+      }
+    },
+    [input, isStreaming, onSend],
+  );
+
+  return (
+    <div
+      className={`shrink-0 mx-3 mb-2 rounded-lg border transition-colors ${
+        isStreaming
+          ? "border-gray-200 bg-gray-50/50"
+          : "border-gray-200 focus-within:border-gray-300"
+      }`}
+    >
+      <textarea
+        ref={textareaRef}
+        placeholder="Ask anything..."
+        rows={1}
+        disabled={isStreaming}
+        value={input}
+        onChange={handleInput}
+        onKeyDown={handleKeyDown}
+        className={`nodrag nowheel w-full resize-none rounded-t-lg border-0 bg-transparent px-3 pt-2 pb-1 text-xs placeholder-gray-400 focus:outline-none focus:ring-0 ${
+          isStreaming ? "text-gray-400 cursor-not-allowed" : "text-gray-700"
+        }`}
+        style={{ minHeight: "28px", maxHeight: "120px" }}
+      />
+      <div className="flex items-center justify-between px-2 pb-1.5">
+        <div className="flex items-center gap-1.5">
+          <ModelSelector
+            modelId={modelId}
+            onChange={onModelChange}
+            disabled={isStreaming}
+          />
+          <button
+            type="button"
+            disabled={isStreaming}
+            onClick={onWebSearchToggle}
+            className={`nodrag flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] transition-colors cursor-pointer ${
+              isStreaming
+                ? "text-gray-400 cursor-not-allowed"
+                : webSearch
+                  ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            }`}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+            Search
+          </button>
+        </div>
+        {isStreaming ? (
+          <button
+            type="button"
+            onClick={onStop}
+            className="nodrag rounded-full bg-red-500 p-1.5 text-white hover:bg-red-600 transition-colors cursor-pointer"
+            title="Stop generating"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="7" y="7" width="10" height="10" rx="1" />
+            </svg>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              const text = input.trim();
+              if (!text) return;
+              setInput("");
+              requestAnimationFrame(() => {
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = "auto";
+                }
+              });
+              onSend(text);
+            }}
+            className="nodrag rounded-full bg-gray-900 p-1.5 text-white hover:bg-gray-800 transition-colors cursor-pointer"
+            title="Send"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="19" x2="12" y2="5" />
+              <polyline points="5 12 12 5 19 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main ChatNode
+// ---------------------------------------------------------------------------
+
+const sourceBadgeColors: Record<string, string> = {
   chatgpt: "bg-emerald-600 text-white",
   claude: "bg-orange-500 text-white",
   manual: "bg-gray-600 text-white",
@@ -58,12 +379,43 @@ const sourceBadgeColors: Record<ChatNodeData["source"], string> = {
 function ChatNode({
   id,
   data,
-  selected,
 }: NodeProps & { data: ChatNodeData }) {
   const { setNodes } = useReactFlow();
-  const [linkCopied, setLinkCopied] = useState(false);
   const [contextCopied, setContextCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [contextCollapsed, setContextCollapsed] = useState(false);
+  const [hasUserToggledContext, setHasUserToggledContext] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const isInteractive = data.source === "interactive";
+  const autoCollapsed =
+    (data.messages?.length ?? 0) > 0 && (data.attachedSots?.length ?? 0) > 0;
+  const contextBarCollapsed = hasUserToggledContext ? contextCollapsed : autoCollapsed;
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [data.messages]);
+
+  const updateData = useCallback(
+    (patch: Partial<ChatNodeData>) => {
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === id
+            ? { ...n, data: { ...(n.data as ChatNodeData), ...patch } }
+            : n,
+        ),
+      );
+    },
+    [id, setNodes],
+  );
+
+  const handleTitleChange = useCallback(
+    (title: string) => updateData({ title }),
+    [updateData],
+  );
 
   const handleCopyContext = useCallback(() => {
     const fakeNode = { id, data } as Node<ChatNodeData>;
@@ -93,37 +445,146 @@ function ChatNode({
       .then((res) => res.json())
       .then((result) => {
         const messages: ChatMessage[] = result.messages ?? [];
-        setNodes((nds) =>
-          nds.map((n) =>
-            n.id === id
-              ? {
-                  ...n,
-                  data: {
-                    ...(n.data as ChatNodeData),
-                    title: result.title ?? (n.data as ChatNodeData).title,
-                    model: result.model,
-                    messages,
-                  },
-                }
-              : n,
-          ),
-        );
+        updateData({
+          title: result.title ?? data.title,
+          model: result.model,
+          messages,
+        });
       })
       .finally(() => setRefreshing(false));
-  }, [id, data.sourceUrl, data.source, refreshing, setNodes]);
+  }, [data.sourceUrl, data.source, data.title, refreshing, updateData]);
 
-  const handleTitleChange = useCallback(
-    (title: string) => {
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === id
-            ? { ...n, data: { ...(n.data as ChatNodeData), title } }
-            : n,
-        ),
-      );
+  // --- Interactive chat ---
+
+  const handleSend = useCallback(
+    async (text: string) => {
+      const userMsg: ChatMessage = {
+        role: "user",
+        content: text,
+        timestamp: Date.now(),
+      };
+      const currentMessages = [...(data.messages ?? []), userMsg];
+
+      updateData({
+        messages: currentMessages,
+        isStreaming: true,
+      });
+
+      const abortController = new AbortController();
+      abortRef.current = abortController;
+
+      try {
+        const modelId = data.modelId || DEFAULT_MODEL_ID;
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: currentMessages.map((m) => ({
+              role: m.role,
+              content: [{ type: "text", text: m.content }],
+            })),
+            modelId,
+            attachedSots: (data.attachedSots ?? []).map((s) => ({
+              title: s.title,
+              content: s.content,
+              sourceType: s.sourceType,
+            })),
+            webSearch: data.webSearch ?? true,
+          }),
+          signal: abortController.signal,
+        });
+
+        if (!res.ok) {
+          const err = await res.text();
+          updateData({
+            messages: [
+              ...currentMessages,
+              { role: "assistant", content: `Error: ${err}`, timestamp: Date.now() },
+            ],
+            isStreaming: false,
+          });
+          return;
+        }
+
+        const reader = res.body?.getReader();
+        if (!reader) return;
+
+        const decoder = new TextDecoder();
+        let assistantContent = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          assistantContent += decoder.decode(value, { stream: true });
+
+          // Update in-place by replacing the last assistant message
+          const updatedMessages = [
+            ...currentMessages,
+            {
+              role: "assistant" as const,
+              content: assistantContent,
+              timestamp: Date.now(),
+            },
+          ];
+
+          updateData({ messages: updatedMessages });
+        }
+
+        // If the stream completed but produced no content, show a fallback error
+        if (!assistantContent) {
+          updateData({
+            messages: [
+              ...currentMessages,
+              {
+                role: "assistant",
+                content:
+                  "Something went wrong — the model returned an empty response. Check the server logs for details.",
+                timestamp: Date.now(),
+              },
+            ],
+          });
+        }
+
+        updateData({ isStreaming: false });
+      } catch (err) {
+        if ((err as Error).name === "AbortError") {
+          updateData({ isStreaming: false });
+          return;
+        }
+        updateData({
+          messages: [
+            ...currentMessages,
+            {
+              role: "assistant",
+              content: `Error: ${(err as Error).message}`,
+              timestamp: Date.now(),
+            },
+          ],
+          isStreaming: false,
+        });
+      }
     },
-    [id, setNodes],
+    [data.messages, data.modelId, data.attachedSots, data.webSearch, updateData],
   );
+
+  const handleStop = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+  }, []);
+
+  const handleRemoveSot = useCallback(
+    (nodeId: string) => {
+      updateData({
+        attachedSots: (data.attachedSots ?? []).filter(
+          (s) => s.nodeId !== nodeId,
+        ),
+      });
+    },
+    [data.attachedSots, updateData],
+  );
+
+  // --- Loading state ---
   if (data.isLoading) {
     return (
       <>
@@ -151,6 +612,8 @@ function ChatNode({
     );
   }
 
+  const hasMessages = (data.messages ?? []).length > 0;
+
   return (
     <>
       <NodeResizer
@@ -169,53 +632,89 @@ function ChatNode({
 
         {/* Header */}
         <div className="flex items-start justify-between border-b border-gray-100 px-4 pb-2 min-w-0">
-          <EditableTitle
-            title={data.title}
-            onChange={handleTitleChange}
-          />
-          <span
-            className={`ml-2 mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${sourceBadgeColors[data.source]}`}
-          >
-            {data.source}
-          </span>
+          <EditableTitle title={data.title} onChange={handleTitleChange} />
+          {!isInteractive && data.source && sourceBadgeColors[data.source] && (
+            <span
+              className={`ml-2 mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${sourceBadgeColors[data.source]}`}
+            >
+              {data.source}
+            </span>
+          )}
         </div>
 
-        {/* Messages */}
-        <div className="nowheel min-h-0 flex-1 overflow-y-auto p-3 space-y-3">
-          {(data.messages ?? []).map((msg, i) =>
-            msg.role === "user" ? (
-              <div key={i} className="flex justify-end">
-                <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-gray-100 px-3 py-2">
-                  <div className="prose prose-xs prose-gray text-xs leading-relaxed text-gray-700">
-                    <ReactMarkdown
-                      components={{
-                        code: CodeBlock,
-                      }}
-                    >
+        {/* Context bar (interactive only) */}
+        {isInteractive && (
+          <ContextBar
+            sots={data.attachedSots ?? []}
+            collapsed={contextBarCollapsed}
+            onToggle={() => {
+              setHasUserToggledContext(true);
+              setContextCollapsed(!contextBarCollapsed);
+            }}
+            onRemove={handleRemoveSot}
+          />
+        )}
+
+        {/* Messages or empty state */}
+        {hasMessages ? (
+          <div className="nowheel min-h-0 flex-1 overflow-y-auto p-3 space-y-3">
+            {(data.messages ?? []).map((msg, i) =>
+              msg.role === "user" ? (
+                <div key={i} className="flex justify-end">
+                  <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-gray-100 px-3 py-2">
+                    <div className="prose prose-xs prose-gray text-xs leading-relaxed text-gray-700">
+                      <ReactMarkdown components={{ code: CodeBlock }}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div key={i}>
+                  <div className="prose prose-xs prose-gray text-xs leading-relaxed text-gray-600">
+                    <ReactMarkdown components={{ code: CodeBlock }}>
                       {msg.content}
                     </ReactMarkdown>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div key={i}>
-                <div className="prose prose-xs prose-gray text-xs leading-relaxed text-gray-600">
-                  <ReactMarkdown
-                    components={{
-                      code: CodeBlock,
-                    }}
-                  >
-                    {msg.content}
-                  </ReactMarkdown>
-                </div>
-              </div>
-            ),
-          )}
-        </div>
+              ),
+            )}
+            {data.isStreaming && (
+              <span className="inline-block w-1.5 h-3.5 bg-gray-400 animate-pulse" />
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        ) : isInteractive ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <p className="text-xs text-gray-400">Start a conversation</p>
+            <p className="text-[10px] text-gray-300 mt-1">Drag SOTs here to attach context</p>
+          </div>
+        ) : (
+          <div className="flex-1" />
+        )}
+
+        {/* Composer (interactive only) */}
+        {isInteractive && (
+          <Composer
+            modelId={data.modelId || DEFAULT_MODEL_ID}
+            webSearch={data.webSearch ?? true}
+            isStreaming={data.isStreaming ?? false}
+            onSend={handleSend}
+            onStop={handleStop}
+            onModelChange={(modelId) => updateData({ modelId })}
+            onWebSearchToggle={() => updateData({ webSearch: !(data.webSearch ?? true) })}
+          />
+        )}
 
         {/* Bottom bar */}
         <div className="flex h-[26px] shrink-0 items-center gap-1 border-t border-gray-100 px-2">
-          {data.sourceUrl && (
+          {/* Imported chat: link + refresh buttons */}
+          {!isInteractive && data.sourceUrl && (
             <>
               <button
                 type="button"
@@ -249,6 +748,22 @@ function ChatNode({
               </button>
             </>
           )}
+
+          {/* Interactive: context summary */}
+          {isInteractive && (data.attachedSots?.length ?? 0) > 0 && (
+            <div className="flex items-center gap-1">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+              <span className="text-[10px] text-gray-400">
+                {data.attachedSots!.length} source{data.attachedSots!.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+          )}
+          {isInteractive && (data.attachedSots?.length ?? 0) === 0 && (
+            <span className="text-[10px] text-gray-300">No context attached</span>
+          )}
+
           <div className="flex-1" />
           <button
             type="button"
@@ -274,3 +789,4 @@ function ChatNode({
 }
 
 export default memo(ChatNode);
+export { SOT_COLORS };

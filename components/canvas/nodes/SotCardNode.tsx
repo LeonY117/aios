@@ -58,7 +58,6 @@ function LoadingSkeleton({ data }: { data: SotNodeData }) {
 function SotCardNode({
   id,
   data,
-  selected,
 }: NodeProps & { data: SotNodeData }) {
   const { setNodes } = useReactFlow();
   const isRichText = data.sourceType === "manual" && data.isRichText;

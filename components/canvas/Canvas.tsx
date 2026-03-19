@@ -38,7 +38,7 @@ import {
   getSessionName,
   debounce,
 } from "@/lib/persistence";
-import type { ContextBlockData, SotNodeData } from "@/types";
+import type { ChatNodeData, ContextBlockData, SotNodeData } from "@/types";
 
 const nodeTypes = {
   sotCard: SotCardNode,
@@ -282,6 +282,24 @@ function CanvasInner() {
     setNodes((nds) => [...nds, node]);
   }, [screenToFlowPosition, setNodes]);
 
+  const addChatNode = useCallback(() => {
+    const position = viewportCenter(screenToFlowPosition);
+    const data: ChatNodeData = {
+      title: "New conversation",
+      source: "interactive",
+      messages: [],
+      webSearch: true,
+    };
+    const node: Node = {
+      id: crypto.randomUUID(),
+      type: "chatWindow",
+      position,
+      data,
+      style: { width: 380, height: 500 },
+    };
+    setNodes((nds) => [...nds, node]);
+  }, [screenToFlowPosition, setNodes]);
+
   const addContextBlock = useCallback(() => {
     const position = viewportCenter(screenToFlowPosition);
     const data: ContextBlockData = { title: "Context Block" };
@@ -316,7 +334,7 @@ function CanvasInner() {
       >
         <Background variant={BackgroundVariant.Dots} />
       </ReactFlow>
-      <CanvasToolbar onAddText={addTextBlock} onAddLink={addLinkNode} onAddContextBlock={addContextBlock} />
+      <CanvasToolbar onAddText={addTextBlock} onAddLink={addLinkNode} onAddChat={addChatNode} onAddContextBlock={addContextBlock} />
       <WorkspaceSidebar
         currentSession={currentSession}
         onSwitch={handleSwitch}

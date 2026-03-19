@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { useReactFlow, type Node } from "@xyflow/react";
 import { detectSource } from "@/lib/sources/detect";
-import { createSotNode, viewportCenter } from "@/lib/nodes";
+import { viewportCenter } from "@/lib/nodes";
 import type { SotNodeData, ChatNodeData, ChatMessage } from "@/types";
 
 type SetNodes = React.Dispatch<React.SetStateAction<Node[]>>;
