@@ -35,6 +35,7 @@ type RichTextEditorProps = {
   onChange: (html: string) => void;
   autoFocus?: boolean;
   selected?: boolean;
+  renderActions?: () => React.ReactNode;
 };
 
 /* ── Toolbar contents (inline, not floating) ── */
@@ -220,6 +221,7 @@ export default function RichTextEditor({
   onChange,
   autoFocus = false,
   selected = false,
+  renderActions,
 }: RichTextEditorProps) {
   const [showToolbar, setShowToolbar] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -295,7 +297,7 @@ export default function RichTextEditor({
             />
           </div>
         ) : showFormatBarHint ? (
-          <div className="flex w-full justify-start animate-[fadeIn_150ms_ease-out]">
+          <div className="flex w-full items-center gap-0.5 animate-[fadeIn_150ms_ease-out]">
             <button
               type="button"
               onClick={() => setShowToolbar(true)}
@@ -310,6 +312,12 @@ export default function RichTextEditor({
             </button>
           </div>
         ) : null}
+        {renderActions && (
+          <>
+            <div className="flex-1" />
+            {renderActions()}
+          </>
+        )}
       </div>
     </div>
   );
