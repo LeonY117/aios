@@ -4,13 +4,18 @@ import {
   memo,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import {
+  Handle,
   NodeResizer,
+  Position,
   useReactFlow,
+  useStore,
   type NodeProps,
+  type ReactFlowState,
 } from "@xyflow/react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -19,8 +24,26 @@ import ConnectorHandle from "./ConnectorHandle";
 import EditableTitle from "./EditableTitle";
 import { compileSingleContext } from "@/lib/context-export";
 import { ALL_MODELS, DEFAULT_MODEL_ID, getModelName } from "@/lib/ai/models-client";
-import type { ChatNodeData, ChatMessage, AttachedSot } from "@/types";
+import type { ChatNodeData, ChatMessage, AttachedSot, SotNodeData } from "@/types";
 import type { Node } from "@xyflow/react";
+
+// ---------------------------------------------------------------------------
+// React Flow selectors (same pattern as ContextBlockNode)
+// ---------------------------------------------------------------------------
+
+const selectIsConnecting = (state: ReactFlowState) =>
+  state.connection.inProgress;
+
+function selectConnectedSots(id: string) {
+  return (state: ReactFlowState) => {
+    const connectedSotIds = state.edges
+      .filter((e) => e.target === id)
+      .map((e) => e.source);
+    return state.nodes.filter((n) =>
+      connectedSotIds.includes(n.id),
+    ) as Node<SotNodeData>[];
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Shared sub-components
@@ -380,7 +403,9 @@ function ChatNode({
   id,
   data,
 }: NodeProps & { data: ChatNodeData }) {
-  const { setNodes } = useReactFlow();
+  const { setNodes, setEdges } = useReactFlow();
+  const isConnecting = useStore(selectIsConnecting);
+  const sotNodes = useStore(selectConnectedSots(id));
   const [contextCopied, setContextCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -390,8 +415,22 @@ function ChatNode({
   const abortRef = useRef<AbortController | null>(null);
 
   const isInteractive = data.source === "interactive";
+
+  // Derive attached SOTs from edges (single source of truth)
+  const attachedSots: AttachedSot[] = useMemo(
+    () =>
+      sotNodes.map((n, i) => ({
+        nodeId: n.id,
+        title: (n.data as SotNodeData).title,
+        content: (n.data as SotNodeData).content,
+        sourceType: (n.data as SotNodeData).sourceType,
+        color: SOT_COLORS[i % SOT_COLORS.length],
+      })),
+    [sotNodes],
+  );
+
   const autoCollapsed =
-    (data.messages?.length ?? 0) > 0 && (data.attachedSots?.length ?? 0) > 0;
+    (data.messages?.length ?? 0) > 0 && attachedSots.length > 0;
   const contextBarCollapsed = hasUserToggledContext ? contextCollapsed : autoCollapsed;
 
   // Auto-scroll to bottom when messages change
@@ -484,7 +523,7 @@ function ChatNode({
               content: [{ type: "text", text: m.content }],
             })),
             modelId,
-            attachedSots: (data.attachedSots ?? []).map((s) => ({
+            attachedSots: attachedSots.map((s) => ({
               title: s.title,
               content: s.content,
               sourceType: s.sourceType,
@@ -565,7 +604,7 @@ function ChatNode({
         });
       }
     },
-    [data.messages, data.modelId, data.attachedSots, data.webSearch, updateData],
+    [data.messages, data.modelId, attachedSots, data.webSearch, updateData],
   );
 
   const handleStop = useCallback(() => {
@@ -574,14 +613,10 @@ function ChatNode({
   }, []);
 
   const handleRemoveSot = useCallback(
-    (nodeId: string) => {
-      updateData({
-        attachedSots: (data.attachedSots ?? []).filter(
-          (s) => s.nodeId !== nodeId,
-        ),
-      });
+    (sotNodeId: string) => {
+      setEdges((eds) => eds.filter((e) => !(e.source === sotNodeId && e.target === id)));
     },
-    [data.attachedSots, updateData],
+    [id, setEdges],
   );
 
   // --- Loading state ---
@@ -624,7 +659,21 @@ function ChatNode({
         handleClassName="!hidden"
       />
       <ConnectorHandle type="source" />
-      <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm transition-colors duration-150 hover:border-gray-300">
+      {/* Full-size invisible target handle — only active during edge drag */}
+      {isInteractive && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!absolute !inset-0 !w-full !h-full !bg-transparent !border-0 !rounded-lg !transform-none chat-drop-handle"
+          style={{
+            top: 0,
+            left: 0,
+            transform: "none",
+            pointerEvents: isConnecting ? "all" : "none",
+          }}
+        />
+      )}
+      <div className="chat-drop-content flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm transition-colors duration-150 hover:border-gray-300">
         {/* Drag handle */}
         <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
           <div className="h-[3px] w-6 rounded-full bg-gray-200" />
@@ -645,7 +694,7 @@ function ChatNode({
         {/* Context bar (interactive only) */}
         {isInteractive && (
           <ContextBar
-            sots={data.attachedSots ?? []}
+            sots={attachedSots}
             collapsed={contextBarCollapsed}
             onToggle={() => {
               setHasUserToggledContext(true);
@@ -750,17 +799,17 @@ function ChatNode({
           )}
 
           {/* Interactive: context summary */}
-          {isInteractive && (data.attachedSots?.length ?? 0) > 0 && (
+          {isInteractive && attachedSots.length > 0 && (
             <div className="flex items-center gap-1">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
               </svg>
               <span className="text-[10px] text-gray-400">
-                {data.attachedSots!.length} source{data.attachedSots!.length !== 1 ? "s" : ""}
+                {attachedSots.length} source{attachedSots.length !== 1 ? "s" : ""}
               </span>
             </div>
           )}
-          {isInteractive && (data.attachedSots?.length ?? 0) === 0 && (
+          {isInteractive && attachedSots.length === 0 && (
             <span className="text-[10px] text-gray-300">No context attached</span>
           )}
 

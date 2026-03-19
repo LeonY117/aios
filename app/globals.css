@@ -41,6 +41,13 @@ body {
   user-select: text !important;
 }
 
+/* Disable text selection while dragging an edge (class toggled via JS) */
+body.connecting-edge .react-flow__node {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  user-select: none !important;
+}
+
 /* Tiptap editor styles */
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);

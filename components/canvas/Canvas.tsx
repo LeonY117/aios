@@ -326,6 +326,8 @@ function CanvasInner() {
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
+        onConnectStart={() => document.body.classList.add("connecting-edge")}
+        onConnectEnd={() => document.body.classList.remove("connecting-edge")}
         onViewportChange={onViewportChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
@@ -378,6 +380,11 @@ export default function Canvas() {
           border-color: #818cf8 !important;
           background-color: #e0e7ff !important;
           box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25) !important;
+        }
+        .chat-drop-handle:hover + .chat-drop-content {
+          border-color: #93c5fd !important;
+          background-color: #eff6ff !important;
+          box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.3) !important;
         }
       `}</style>
       <ReactFlowProvider>
