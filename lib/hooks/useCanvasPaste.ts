@@ -27,17 +27,27 @@ export function handleLinkAdd(
   const detection = detectSource(url);
 
   if (detection.type === "manual") {
-    // Not a valid URL — create as plain text SOT
-    const title =
-      detection.text.length > 50
-        ? detection.text.slice(0, 50) + "…"
-        : detection.text;
+    // Not a valid URL — create as editable rich text note
+    const paragraphs = detection.text
+      .split(/\n+/)
+      .map((line) => `<p>${line}</p>`)
+      .join("");
     const data: SotNodeData = {
-      title,
-      content: detection.text,
+      title: "Untitled",
+      content: paragraphs,
       sourceType: "manual",
+      isRichText: true,
     };
-    setNodes((nds) => [...nds, createSotNode(data, position)]);
+    setNodes((nds) => [
+      ...nds,
+      {
+        id: crypto.randomUUID(),
+        type: "sotCard",
+        position,
+        data,
+        style: { width: 280, height: 360 },
+      },
+    ]);
     return;
   }
 
