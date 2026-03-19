@@ -48,6 +48,7 @@ export function handleLinkAdd(
       title: detection.url,
       source,
       messages: [],
+      sourceUrl: detection.url,
       isLoading: true,
     };
     setNodes((nds) => [
@@ -81,6 +82,7 @@ export function handleLinkAdd(
                     source,
                     model: result.model,
                     messages,
+                    sourceUrl: detection.url,
                     isLoading: false,
                   } satisfies ChatNodeData,
                 }
@@ -103,6 +105,7 @@ export function handleLinkAdd(
                         content: `Failed to fetch or parse this ${source === "chatgpt" ? "ChatGPT" : "Claude"} conversation.`,
                       },
                     ],
+                    sourceUrl: detection.url,
                     isLoading: false,
                   } satisfies ChatNodeData,
                 }

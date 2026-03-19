@@ -88,13 +88,13 @@ function ContextBlockNode({
       />
       <div className="context-drop-content flex h-full flex-col rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50 p-4 shadow-sm transition-all duration-150 hover:border-indigo-400">
         {/* Header */}
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex items-start justify-between">
           <EditableTitle
             title={data.title}
             onChange={handleTitleChange}
             className="text-sm font-semibold text-indigo-900"
           />
-          <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-indigo-100 text-indigo-600">
+          <span className="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-indigo-100 text-indigo-600">
             context
           </span>
         </div>

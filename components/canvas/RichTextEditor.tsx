@@ -70,6 +70,21 @@ function ToolbarContent({
 
   return (
     <>
+      {/* Close */}
+      <button
+        type="button"
+        onClick={onClose}
+        title="Close toolbar"
+        className="nodrag rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+
+      <div className="mx-0.5 h-3 w-px bg-gray-200" />
+
       {/* Heading dropdown */}
       <div className="relative">
         <button
@@ -194,19 +209,6 @@ function ToolbarContent({
         "Todo list",
       )}
 
-      {/* Spacer + close */}
-      <div className="flex-1" />
-      <button
-        type="button"
-        onClick={onClose}
-        title="Close toolbar"
-        className="nodrag rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
     </>
   );
 }
@@ -286,19 +288,19 @@ export default function RichTextEditor({
       {/* Reserved bottom bar — always takes up space */}
       <div className="flex h-[26px] shrink-0 items-center border-t border-gray-100 px-2">
         {toolbarVisible ? (
-          <div className="flex w-full items-center gap-0.5">
+          <div className="flex w-full items-center gap-0.5 animate-[fadeIn_150ms_ease-out]">
             <ToolbarContent
               editor={editor}
               onClose={() => setShowToolbar(false)}
             />
           </div>
         ) : showFormatBarHint ? (
-          <div className="flex w-full justify-end">
+          <div className="flex w-full justify-start animate-[fadeIn_150ms_ease-out]">
             <button
               type="button"
               onClick={() => setShowToolbar(true)}
               title="Show formatting toolbar (⌘/)"
-              className="nodrag rounded p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              className="nodrag rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="4 7 4 4 20 4 20 7" />

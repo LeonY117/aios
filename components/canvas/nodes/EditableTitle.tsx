@@ -52,7 +52,7 @@ export default function EditableTitle({
           ref.current?.blur();
         }
       }}
-      className={`nodrag truncate outline-none cursor-text rounded-sm px-1 -mx-1 ${focused ? "shadow-[inset_0_0_0_1px_#d1d5db] bg-gray-50/50" : ""} ${className}`}
+      className={`nodrag outline-none cursor-text rounded-sm px-1 -mx-1 line-clamp-2 ${focused ? "shadow-[inset_0_0_0_1px_#d1d5db] bg-gray-50/50 line-clamp-none" : ""} ${className}`}
     />
   );
 }

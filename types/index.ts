@@ -19,6 +19,7 @@ export type ChatNodeData = {
   source: "chatgpt" | "claude" | "manual";
   model?: string;
   messages: ChatMessage[];
+  sourceUrl?: string;
   isLoading?: boolean;
 };
 

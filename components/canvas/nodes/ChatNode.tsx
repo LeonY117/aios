@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback } from "react";
+import { memo, useCallback, useState } from "react";
 import {
   NodeResizer,
   useReactFlow,
@@ -11,7 +11,12 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import ConnectorHandle from "./ConnectorHandle";
 import EditableTitle from "./EditableTitle";
-import type { ChatNodeData } from "@/types";
+import type { ChatNodeData, ChatMessage } from "@/types";
+
+const SOURCE_ENDPOINT: Record<string, string> = {
+  chatgpt: "/api/sources/chatgpt",
+  claude: "/api/sources/claude",
+};
 
 function CodeBlock({
   className,
@@ -54,6 +59,48 @@ function ChatNode({
   selected,
 }: NodeProps & { data: ChatNodeData }) {
   const { setNodes } = useReactFlow();
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleCopyLink = useCallback(() => {
+    if (!data.sourceUrl) return;
+    navigator.clipboard.writeText(data.sourceUrl);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  }, [data.sourceUrl]);
+
+  const handleRefresh = useCallback(() => {
+    if (!data.sourceUrl || refreshing) return;
+    const endpoint = SOURCE_ENDPOINT[data.source];
+    if (!endpoint) return;
+    setRefreshing(true);
+    fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: data.sourceUrl }),
+    })
+      .then((res) => res.json())
+      .then((result) => {
+        const messages: ChatMessage[] = result.messages ?? [];
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === id
+              ? {
+                  ...n,
+                  data: {
+                    ...(n.data as ChatNodeData),
+                    title: result.title ?? (n.data as ChatNodeData).title,
+                    model: result.model,
+                    messages,
+                  },
+                }
+              : n,
+          ),
+        );
+      })
+      .finally(() => setRefreshing(false));
+  }, [id, data.sourceUrl, data.source, refreshing, setNodes]);
+
   const handleTitleChange = useCallback(
     (title: string) => {
       setNodes((nds) =>
@@ -105,21 +152,13 @@ function ChatNode({
       <ConnectorHandle type="source" />
       <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm transition-colors duration-150 hover:border-gray-300">
         {/* Header */}
-        <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3 min-w-0">
+        <div className="flex items-start justify-between border-b border-gray-100 px-4 py-3 min-w-0">
           <EditableTitle
             title={data.title}
             onChange={handleTitleChange}
           />
-          <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500">
-            {data.messages?.length ?? 0} msgs
-          </span>
-          {data.model && (
-            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500">
-              {data.model}
-            </span>
-          )}
           <span
-            className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${sourceBadgeColors[data.source]}`}
+            className={`ml-2 mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${sourceBadgeColors[data.source]}`}
           >
             {data.source}
           </span>
@@ -155,6 +194,44 @@ function ChatNode({
                 </div>
               </div>
             ),
+          )}
+        </div>
+
+        {/* Bottom bar */}
+        <div className="flex h-[26px] shrink-0 items-center gap-1 border-t border-gray-100 px-2">
+          {data.sourceUrl && (
+            <>
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                title="Copy source link"
+                className="nodrag rounded p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              >
+                {linkCopied ? (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                title="Refresh content"
+                className={`nodrag rounded p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer ${refreshing ? "animate-spin" : ""}`}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10" />
+                  <polyline points="1 20 1 14 7 14" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+                  <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
+                </svg>
+              </button>
+            </>
           )}
         </div>
       </div>
