@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -313,10 +313,15 @@ function CanvasInner() {
     setNodes((nds) => [...nds, node]);
   }, [screenToFlowPosition, setNodes]);
 
+  const draggableNodes = useMemo(
+    () => nodes.map((n) => (n.dragHandle === ".custom-drag-handle" ? n : { ...n, dragHandle: ".custom-drag-handle" })),
+    [nodes],
+  );
+
   return (
     <>
       <ReactFlow
-        nodes={nodes}
+        nodes={draggableNodes}
         edges={edges}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}

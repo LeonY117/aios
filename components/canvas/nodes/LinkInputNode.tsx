@@ -36,7 +36,11 @@ function LinkInputNode({
         lineClassName="!border-transparent !border-[6px] hover:!border-blue-200 !transition-colors !duration-150"
         handleClassName="!w-3 !h-3 !bg-blue-400 !border-blue-400 !rounded-full !opacity-0 hover:!opacity-100 !transition-opacity !duration-150"
       />
-      <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
+          <div className="h-[3px] w-6 rounded-full bg-gray-200" />
+        </div>
+        <div className="flex flex-1 flex-col px-4 pb-4">
         <div className="mb-3 flex items-center gap-2">
           <svg
             width="16"
@@ -83,6 +87,7 @@ function LinkInputNode({
           >
             Add
           </button>
+        </div>
         </div>
       </div>
     </>

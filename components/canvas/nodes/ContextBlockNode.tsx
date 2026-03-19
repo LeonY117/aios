@@ -87,7 +87,7 @@ function ContextBlockNode({
       />
       <div className="context-drop-content flex h-full flex-col rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50 shadow-sm transition-all duration-150 hover:border-indigo-400">
         {/* Drag handle */}
-        <div className="flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
+        <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
           <div className="h-[3px] w-6 rounded-full bg-indigo-200" />
         </div>
 
