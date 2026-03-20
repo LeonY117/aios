@@ -91,6 +91,7 @@ function CodeBlock({
   );
 }
 
+
 function SourcesDropdown({ sources }: { sources: ChatSource[] }) {
   const [open, setOpen] = useState(false);
   return (
@@ -856,9 +857,12 @@ function ChatNode({
 
         {/* Messages or empty state */}
         {hasMessages ? (
-          <div className="nowheel min-h-0 flex-1 overflow-y-auto p-3 space-y-3 cursor-text">
-            {(data.messages ?? []).map((msg, i) =>
-              msg.role === "user" ? (
+          <div className="nowheel min-h-0 flex-1 overflow-y-auto p-3 cursor-text">
+           <div className="mx-auto max-w-xl space-y-3">
+            {(data.messages ?? []).map((msg, i, arr) => {
+              const isLastAssistant =
+                data.isStreaming && msg.role === "assistant" && i === arr.length - 1;
+              return msg.role === "user" ? (
                 <div key={i} className="flex justify-end">
                   <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-gray-100 px-3 py-2">
                     <div className="prose prose-xs prose-gray text-xs leading-relaxed text-gray-700">
@@ -870,7 +874,7 @@ function ChatNode({
                 </div>
               ) : (
                 <div key={i}>
-                  <div className="prose prose-xs prose-gray text-xs leading-relaxed text-gray-600">
+                  <div className={`prose prose-xs prose-gray max-w-none text-xs leading-relaxed text-gray-600 ${isLastAssistant ? "streaming-prose" : ""}`}>
                     <ReactMarkdown components={{ code: CodeBlock }}>
                       {msg.content}
                     </ReactMarkdown>
@@ -879,8 +883,8 @@ function ChatNode({
                     <SourcesDropdown sources={msg.sources} />
                   )}
                 </div>
-              ),
-            )}
+              );
+            })}
             {isSearching && (
               <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
@@ -891,6 +895,7 @@ function ChatNode({
               <span className="inline-block w-1.5 h-3.5 bg-gray-400 animate-pulse" />
             )}
             <div ref={messagesEndRef} />
+           </div>
           </div>
         ) : isInteractive ? (
           <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">

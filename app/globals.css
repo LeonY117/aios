@@ -6,6 +6,10 @@
   to { opacity: 1; }
 }
 
+.streaming-prose > *:last-child {
+  animation: fadeIn 0.3s ease-out;
+}
+
 /* Edge hover pulse & selection */
 .react-flow__edge .react-flow__edge-path {
   transition: stroke-width 0.2s ease, stroke 0.2s ease;
