@@ -24,7 +24,7 @@ import ConnectorHandle from "./ConnectorHandle";
 import EditableTitle from "./EditableTitle";
 import { compileSingleContext } from "@/lib/context-export";
 import { ALL_MODELS, DEFAULT_MODEL_ID, getModelName } from "@/lib/ai/models-client";
-import type { ChatNodeData, ChatMessage, AttachedSot, SotNodeData } from "@/types";
+import type { ChatNodeData, ChatMessage, AttachedSot, SotNodeData, ContextBlockData } from "@/types";
 import type { Node } from "@xyflow/react";
 
 // ---------------------------------------------------------------------------
@@ -34,14 +34,28 @@ import type { Node } from "@xyflow/react";
 const selectIsConnecting = (state: ReactFlowState) =>
   state.connection.inProgress;
 
-function selectConnectedSots(id: string) {
+function selectConnectedSources(id: string) {
   return (state: ReactFlowState) => {
-    const connectedSotIds = state.edges
+    const directSourceIds = state.edges
       .filter((e) => e.target === id)
       .map((e) => e.source);
-    return state.nodes.filter((n) =>
-      connectedSotIds.includes(n.id),
-    ) as Node<SotNodeData>[];
+    const directNodes = state.nodes.filter((n) =>
+      directSourceIds.includes(n.id),
+    );
+
+    // For context blocks, also pull in their connected SOTs (transitive)
+    const transitiveNodes: Node[] = [];
+    for (const node of directNodes) {
+      if (node.type === "contextBlock") {
+        const childIds = state.edges
+          .filter((e) => e.target === node.id)
+          .map((e) => e.source);
+        const children = state.nodes.filter((n) => childIds.includes(n.id));
+        transitiveNodes.push(...children);
+      }
+    }
+
+    return [...directNodes, ...transitiveNodes];
   };
 }
 
@@ -405,7 +419,7 @@ function ChatNode({
 }: NodeProps & { data: ChatNodeData }) {
   const { setNodes, setEdges } = useReactFlow();
   const isConnecting = useStore(selectIsConnecting);
-  const sotNodes = useStore(selectConnectedSots(id));
+  const sourceNodes = useStore(selectConnectedSources(id));
   const [contextCopied, setContextCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -417,18 +431,40 @@ function ChatNode({
 
   const isInteractive = data.source === "interactive";
 
-  // Derive attached SOTs from edges (single source of truth)
-  const attachedSots: AttachedSot[] = useMemo(
-    () =>
-      sotNodes.map((n, i) => ({
-        nodeId: n.id,
-        title: (n.data as SotNodeData).title,
-        content: (n.data as SotNodeData).content,
-        sourceType: (n.data as SotNodeData).sourceType,
-        color: SOT_COLORS[i % SOT_COLORS.length],
-      })),
-    [sotNodes],
-  );
+  // Derive attached context from edges — handle SOT cards, chat nodes, and context blocks
+  const attachedSots: AttachedSot[] = useMemo(() => {
+    const results: AttachedSot[] = [];
+    let colorIdx = 0;
+    for (const n of sourceNodes) {
+      if (n.type === "sotCard") {
+        const d = n.data as SotNodeData;
+        results.push({
+          nodeId: n.id,
+          title: d.title,
+          content: d.content,
+          sourceType: d.sourceType,
+          color: SOT_COLORS[colorIdx++ % SOT_COLORS.length],
+        });
+      } else if (n.type === "chatWindow") {
+        const d = n.data as ChatNodeData;
+        const content = (d.messages ?? [])
+          .map((m) => `${m.role}: ${m.content}`)
+          .join("\n\n");
+        if (content) {
+          results.push({
+            nodeId: n.id,
+            title: d.title || "Chat",
+            content,
+            sourceType: "chat",
+            color: SOT_COLORS[colorIdx++ % SOT_COLORS.length],
+          });
+        }
+      }
+      // contextBlock nodes are skipped — their children are already
+      // included as transitive nodes by the selector
+    }
+    return results;
+  }, [sourceNodes]);
 
   const autoCollapsed =
     (data.messages?.length ?? 0) > 0 && attachedSots.length > 0;
