@@ -21,21 +21,18 @@ type SessionLayout = {
 // --- Content serialization ---
 
 function serializeChatMessages(messages: ChatMessage[]): string {
-  return messages
-    .map((m) => `**${m.role}:**\n${m.content}`)
-    .join("\n\n---\n\n");
+  return JSON.stringify(
+    messages.map((m) => ({ role: m.role, content: m.content, ...(m.timestamp != null ? { timestamp: m.timestamp } : {}) })),
+  );
 }
 
-function deserializeChatMessages(md: string): ChatMessage[] {
-  if (!md.trim()) return [];
-  return md.split("\n\n---\n\n").map((block) => {
-    const match = block.match(/^\*\*(\w+):\*\*\n([\s\S]*)$/);
-    if (!match) return { role: "user" as const, content: block };
-    return {
-      role: match[1] as ChatMessage["role"],
-      content: match[2],
-    };
-  });
+function deserializeChatMessages(raw: string): ChatMessage[] {
+  if (!raw.trim()) return [];
+  try {
+    return JSON.parse(raw) as ChatMessage[];
+  } catch {
+    return [];
+  }
 }
 
 function getNodeContent(node: Node): string | null {
