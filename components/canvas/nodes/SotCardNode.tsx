@@ -212,8 +212,10 @@ function SotCardNode({
           </div>
         ) : (
           <>
-            <div className="nowheel min-h-0 flex-1 overflow-y-auto px-4 pb-3 text-xs leading-relaxed text-gray-600 prose prose-xs prose-gray cursor-text">
-              <ReactMarkdown rehypePlugins={[rehypeRaw]}>{data.content}</ReactMarkdown>
+            <div className="nowheel min-h-0 flex-1 overflow-y-auto px-4 pb-3 cursor-text">
+              <div className="mx-auto max-w-xl text-xs leading-relaxed text-gray-600 prose prose-xs prose-gray">
+                <ReactMarkdown rehypePlugins={[rehypeRaw]}>{data.content}</ReactMarkdown>
+              </div>
             </div>
             {/* Bottom bar */}
             <div className="flex h-[26px] shrink-0 items-center gap-1 border-t border-gray-100 px-2">

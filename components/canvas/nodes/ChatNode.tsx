@@ -23,7 +23,7 @@ import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import ConnectorHandle from "./ConnectorHandle";
 import EditableTitle from "./EditableTitle";
 import { compileSingleContext } from "@/lib/context-export";
-import { ALL_MODELS, DEFAULT_MODEL_ID, getModelName } from "@/lib/ai/models-client";
+import { ALL_MODELS, DEFAULT_MODEL_ID, getModelName, modelSupportsWebSearch } from "@/lib/ai/models-client";
 import type { ChatNodeData, ChatMessage, ChatSource, AttachedSot, SotNodeData, ContextBlockData } from "@/types";
 import type { StreamEvent } from "@/app/api/chat/route";
 import type { Node } from "@xyflow/react";
@@ -407,25 +407,27 @@ function Composer({
             onChange={onModelChange}
             disabled={isStreaming}
           />
-          <button
-            type="button"
-            disabled={isStreaming}
-            onClick={onWebSearchToggle}
-            className={`nodrag flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] transition-colors cursor-pointer ${
-              isStreaming
-                ? "text-gray-400 cursor-not-allowed"
-                : webSearch
-                  ? "bg-blue-100 text-blue-600 hover:bg-blue-200"
-                  : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-            }`}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="2" y1="12" x2="22" y2="12" />
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-            </svg>
-            Search
-          </button>
+          {modelSupportsWebSearch(modelId) && (
+            <button
+              type="button"
+              disabled={isStreaming}
+              onClick={onWebSearchToggle}
+              className={`nodrag flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] transition-colors cursor-pointer ${
+                isStreaming
+                  ? "text-gray-400 cursor-not-allowed"
+                  : webSearch
+                    ? "bg-blue-100 text-blue-600 hover:bg-blue-200"
+                    : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              }`}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="2" y1="12" x2="22" y2="12" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+              Search
+            </button>
+          )}
         </div>
         {isStreaming ? (
           <button
@@ -919,7 +921,10 @@ function ChatNode({
             isStreaming={data.isStreaming ?? false}
             onSend={handleSend}
             onStop={handleStop}
-            onModelChange={(modelId) => updateData({ modelId })}
+            onModelChange={(modelId) => updateData({
+              modelId,
+              ...(!modelSupportsWebSearch(modelId) ? { webSearch: false } : {}),
+            })}
             onWebSearchToggle={() => updateData({ webSearch: !(data.webSearch ?? false) })}
           />
         )}
