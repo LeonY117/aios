@@ -8,10 +8,16 @@ export type SotNodeData = {
   isEditing?: boolean;
 };
 
+export type ChatSource = {
+  url: string;
+  title?: string;
+};
+
 export type ChatMessage = {
   role: "user" | "assistant" | "system";
   content: string;
   timestamp?: number;
+  sources?: ChatSource[];
 };
 
 export type AttachedSot = {

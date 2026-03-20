@@ -22,7 +22,12 @@ type SessionLayout = {
 
 function serializeChatMessages(messages: ChatMessage[]): string {
   return JSON.stringify(
-    messages.map((m) => ({ role: m.role, content: m.content, ...(m.timestamp != null ? { timestamp: m.timestamp } : {}) })),
+    messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+      ...(m.timestamp != null ? { timestamp: m.timestamp } : {}),
+      ...(m.sources && m.sources.length > 0 ? { sources: m.sources } : {}),
+    })),
   );
 }
 

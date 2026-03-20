@@ -24,7 +24,8 @@ import ConnectorHandle from "./ConnectorHandle";
 import EditableTitle from "./EditableTitle";
 import { compileSingleContext } from "@/lib/context-export";
 import { ALL_MODELS, DEFAULT_MODEL_ID, getModelName } from "@/lib/ai/models-client";
-import type { ChatNodeData, ChatMessage, AttachedSot, SotNodeData, ContextBlockData } from "@/types";
+import type { ChatNodeData, ChatMessage, ChatSource, AttachedSot, SotNodeData, ContextBlockData } from "@/types";
+import type { StreamEvent } from "@/app/api/chat/route";
 import type { Node } from "@xyflow/react";
 
 // ---------------------------------------------------------------------------
@@ -87,6 +88,67 @@ function CodeBlock({
     >
       {String(children).replace(/\n$/, "")}
     </SyntaxHighlighter>
+  );
+}
+
+function SourcesDropdown({ sources }: { sources: ChatSource[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-1.5">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="nodrag inline-flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+      >
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+        {sources.length} source{sources.length !== 1 ? "s" : ""}
+        <svg
+          width="8"
+          height="8"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`transition-transform ${open ? "rotate-180" : ""}`}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open && (
+        <div className="mt-1 flex flex-col gap-0.5">
+          {sources.map((src, j) => (
+            <a
+              key={j}
+              href={src.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nodrag inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors truncate"
+            >
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+              {src.title || new URL(src.url).hostname}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -423,6 +485,7 @@ function ChatNode({
   const [contextCopied, setContextCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [contextCollapsed, setContextCollapsed] = useState(false);
   const [hasUserToggledContext, setHasUserToggledContext] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -596,28 +659,69 @@ function ChatNode({
 
         const decoder = new TextDecoder();
         let assistantContent = "";
+        let buffer = "";
+        const sources: ChatSource[] = [];
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          assistantContent += decoder.decode(value, { stream: true });
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
 
-          // Update in-place by replacing the last assistant message
-          const updatedMessages = [
-            ...currentMessages,
-            {
-              role: "assistant" as const,
-              content: assistantContent,
-              timestamp: Date.now(),
-            },
-          ];
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith("data: ")) continue;
+            const event = JSON.parse(trimmed.slice(6)) as StreamEvent;
 
-          updateData({ messages: updatedMessages });
+            switch (event.type) {
+              case "text":
+                assistantContent += event.text;
+                updateData({
+                  messages: [
+                    ...currentMessages,
+                    {
+                      role: "assistant" as const,
+                      content: assistantContent,
+                      timestamp: Date.now(),
+                      sources: sources.length > 0 ? [...sources] : undefined,
+                    },
+                  ],
+                });
+                break;
+              case "tool-call":
+                if (event.toolName === "web_search") {
+                  setIsSearching(true);
+                }
+                break;
+              case "source":
+                sources.push({ url: event.url, title: event.title });
+                break;
+              case "error":
+                assistantContent += `\n\nError: ${event.message}`;
+                break;
+            }
+          }
         }
 
-        // If the stream completed but produced no content, show a fallback error
-        if (!assistantContent) {
+        setIsSearching(false);
+
+        // Final update with sources
+        if (assistantContent) {
+          updateData({
+            messages: [
+              ...currentMessages,
+              {
+                role: "assistant" as const,
+                content: assistantContent,
+                timestamp: Date.now(),
+                sources: sources.length > 0 ? sources : undefined,
+              },
+            ],
+            isStreaming: false,
+          });
+        } else {
           updateData({
             messages: [
               ...currentMessages,
@@ -628,11 +732,11 @@ function ChatNode({
                 timestamp: Date.now(),
               },
             ],
+            isStreaming: false,
           });
         }
-
-        updateData({ isStreaming: false });
       } catch (err) {
+        setIsSearching(false);
         if ((err as Error).name === "AbortError") {
           updateData({ isStreaming: false });
           return;
@@ -771,10 +875,19 @@ function ChatNode({
                       {msg.content}
                     </ReactMarkdown>
                   </div>
+                  {msg.sources && msg.sources.length > 0 && (
+                    <SourcesDropdown sources={msg.sources} />
+                  )}
                 </div>
               ),
             )}
-            {data.isStreaming && (
+            {isSearching && (
+              <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                Searching the web…
+              </div>
+            )}
+            {data.isStreaming && !isSearching && (
               <span className="inline-block w-1.5 h-3.5 bg-gray-400 animate-pulse" />
             )}
             <div ref={messagesEndRef} />

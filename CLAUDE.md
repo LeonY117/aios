@@ -28,10 +28,10 @@ A per-project infinite canvas where:
 
 ## Tech stack
 
-- **Frontend:** Next.js + React Flow (canvas)
-- **LLM integration:** Claude API (primary), extensible to others
-- **Persistence:** localStorage for prototype, database later
-- **Integrations:** Notion API, Slack API (v1+)
+- **Frontend:** Next.js + React Flow (canvas) + Tiptap (rich text editing)
+- **LLM integration:** Vercel AI SDK — Anthropic (Claude) and OpenAI (GPT-4.1 family)
+- **Persistence:** File-based split architecture — `sessions/{name}/session.json` for layout, per-node content files. Debounced auto-save.
+- **Integrations:** Notion, Slack, GitHub (Octokit), generic URL (article-extractor), ChatGPT/Claude share link import (Puppeteer)
 
 ## Development conventions
 
