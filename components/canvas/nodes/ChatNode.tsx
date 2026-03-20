@@ -412,6 +412,7 @@ function ChatNode({
   const [contextCollapsed, setContextCollapsed] = useState(false);
   const [hasUserToggledContext, setHasUserToggledContext] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef<number>(data.messages?.length ?? 0);
   const abortRef = useRef<AbortController | null>(null);
 
   const isInteractive = data.source === "interactive";
@@ -433,9 +434,18 @@ function ChatNode({
     (data.messages?.length ?? 0) > 0 && attachedSots.length > 0;
   const contextBarCollapsed = hasUserToggledContext ? contextCollapsed : autoCollapsed;
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom when messages change:
+  // - Smooth scroll when new messages are added (conversation flow)
+  // - Instant scroll otherwise (workspace switch / initial load)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const count = data.messages?.length ?? 0;
+    const isNewMessage = count > prevMessageCountRef.current;
+    prevMessageCountRef.current = count;
+    if (count > 0) {
+      messagesEndRef.current?.scrollIntoView(
+        isNewMessage ? { behavior: "smooth" } : undefined,
+      );
+    }
   }, [data.messages]);
 
   const updateData = useCallback(
