@@ -18,7 +18,7 @@ export const ALL_MODELS: ClientModelConfig[] = [
   { id: "gpt-4.1-nano", name: "GPT-4.1 Nano" },
 ];
 
-export const DEFAULT_MODEL_ID = ALL_MODELS[0].id;
+export const DEFAULT_MODEL_ID = "claude-haiku-4-5-20251001";
 
 export function getModelName(modelId: string): string {
   return ALL_MODELS.find((m) => m.id === modelId)?.name ?? modelId;

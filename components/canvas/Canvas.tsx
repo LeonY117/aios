@@ -284,11 +284,19 @@ function CanvasInner() {
 
   const addChatNode = useCallback(() => {
     const position = viewportCenter(screenToFlowPosition);
+
+    // Inherit model & web search settings from the most recent chat node
+    const existingChats = nodes.filter((n) => n.type === "chatWindow");
+    const lastChat = existingChats.length > 0
+      ? (existingChats[existingChats.length - 1].data as ChatNodeData)
+      : null;
+
     const data: ChatNodeData = {
       title: "New conversation",
       source: "interactive",
       messages: [],
-      webSearch: true,
+      ...(lastChat?.modelId ? { modelId: lastChat.modelId } : {}),
+      webSearch: lastChat?.webSearch ?? false,
     };
     const node: Node = {
       id: crypto.randomUUID(),
@@ -298,7 +306,7 @@ function CanvasInner() {
       style: { width: 380, height: 500 },
     };
     setNodes((nds) => [...nds, node]);
-  }, [screenToFlowPosition, setNodes]);
+  }, [screenToFlowPosition, setNodes, nodes]);
 
   const addContextBlock = useCallback(() => {
     const position = viewportCenter(screenToFlowPosition);

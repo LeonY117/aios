@@ -352,7 +352,7 @@ function Composer({
               isStreaming
                 ? "text-gray-400 cursor-not-allowed"
                 : webSearch
-                  ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-blue-100 text-blue-600 hover:bg-blue-200"
                   : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
             }`}
           >
@@ -574,7 +574,7 @@ function ChatNode({
               content: s.content,
               sourceType: s.sourceType,
             })),
-            webSearch: data.webSearch ?? true,
+            webSearch: data.webSearch ?? false,
           }),
           signal: abortController.signal,
         });
@@ -797,12 +797,12 @@ function ChatNode({
         {isInteractive && (
           <Composer
             modelId={data.modelId || DEFAULT_MODEL_ID}
-            webSearch={data.webSearch ?? true}
+            webSearch={data.webSearch ?? false}
             isStreaming={data.isStreaming ?? false}
             onSend={handleSend}
             onStop={handleStop}
             onModelChange={(modelId) => updateData({ modelId })}
-            onWebSearchToggle={() => updateData({ webSearch: !(data.webSearch ?? true) })}
+            onWebSearchToggle={() => updateData({ webSearch: !(data.webSearch ?? false) })}
           />
         )}
 
