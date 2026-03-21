@@ -1,17 +1,6 @@
 import type { Node, Edge, Viewport } from "@xyflow/react";
 import type { ChatMessage } from "@/types";
 
-let currentSessionName = "default";
-
-export function getSessionName(): string {
-  return currentSessionName;
-}
-
-export function setSessionName(name: string): void {
-  currentSessionName = name;
-  contentHashes.clear();
-}
-
 type SessionLayout = {
   nodes: Node[];
   edges: Edge[];
@@ -62,37 +51,37 @@ function stripContent(node: Node): Node {
 
 // --- API calls ---
 
-async function fetchLayout(): Promise<SessionLayout> {
-  const res = await fetch(`/api/session?name=${currentSessionName}`);
+async function fetchLayout(sessionName: string): Promise<SessionLayout> {
+  const res = await fetch(`/api/session?name=${encodeURIComponent(sessionName)}`);
   return res.json();
 }
 
-async function postLayout(layout: SessionLayout): Promise<void> {
-  await fetch(`/api/session?name=${currentSessionName}`, {
+async function postLayout(sessionName: string, layout: SessionLayout): Promise<void> {
+  await fetch(`/api/session?name=${encodeURIComponent(sessionName)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(layout),
   });
 }
 
-async function fetchContent(nodeId: string): Promise<string> {
+async function fetchContent(sessionName: string, nodeId: string): Promise<string> {
   const res = await fetch(
-    `/api/session/content?name=${currentSessionName}&id=${nodeId}`,
+    `/api/session/content?name=${encodeURIComponent(sessionName)}&id=${nodeId}`,
   );
   const { content } = await res.json();
   return content;
 }
 
-async function postContent(nodeId: string, content: string): Promise<void> {
-  await fetch(`/api/session/content?name=${currentSessionName}&id=${nodeId}`, {
+async function postContent(sessionName: string, nodeId: string, content: string): Promise<void> {
+  await fetch(`/api/session/content?name=${encodeURIComponent(sessionName)}&id=${nodeId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content }),
   });
 }
 
-async function deleteContent(nodeId: string): Promise<void> {
-  await fetch(`/api/session/content?name=${currentSessionName}&id=${nodeId}`, {
+async function deleteContent(sessionName: string, nodeId: string): Promise<void> {
+  await fetch(`/api/session/content?name=${encodeURIComponent(sessionName)}&id=${nodeId}`, {
     method: "DELETE",
   });
 }
@@ -100,6 +89,10 @@ async function deleteContent(nodeId: string): Promise<void> {
 // --- Content hash tracking ---
 
 const contentHashes = new Map<string, string>();
+
+export function clearContentHashes(): void {
+  contentHashes.clear();
+}
 
 function hashContent(content: string): string {
   // Simple fast hash — good enough for dirty checking
@@ -119,13 +112,13 @@ function isContentDirty(nodeId: string, content: string): boolean {
 
 // --- Public API ---
 
-export async function loadSession(): Promise<{
+export async function loadSession(sessionName: string): Promise<{
   nodes: Node[];
   edges: Edge[];
   viewport: Viewport;
 } | null> {
   try {
-    const layout = await fetchLayout();
+    const layout = await fetchLayout(sessionName);
     if (layout.nodes.length === 0 && layout.edges.length === 0) {
       return null;
     }
@@ -133,7 +126,7 @@ export async function loadSession(): Promise<{
     // Load content for each node in parallel
     const nodes = await Promise.all(
       layout.nodes.map(async (node) => {
-        const content = await fetchContent(node.id);
+        const content = await fetchContent(sessionName, node.id);
         const data = { ...node.data } as Record<string, unknown>;
 
         if (node.type === "chatWindow" && content) {
@@ -159,6 +152,7 @@ export async function loadSession(): Promise<{
 }
 
 export async function saveSession(
+  sessionName: string,
   nodes: Node[],
   edges: Edge[],
   viewport: Viewport,
@@ -168,7 +162,7 @@ export async function saveSession(
     const strippedNodes = nodes
       .filter((n) => !n.data?.isLoading)
       .map(stripContent);
-    await postLayout({ nodes: strippedNodes, edges, viewport });
+    await postLayout(sessionName, { nodes: strippedNodes, edges, viewport });
 
     // Save dirty content files in parallel
     const contentSaves = nodes
@@ -177,7 +171,7 @@ export async function saveSession(
         const content = getNodeContent(node);
         if (content === null) return null;
         if (!isContentDirty(node.id, content)) return null;
-        return postContent(node.id, content);
+        return postContent(sessionName, node.id, content);
       })
       .filter(Boolean);
 
@@ -187,9 +181,22 @@ export async function saveSession(
   }
 }
 
-export async function deleteNodeContent(nodeId: string): Promise<void> {
+export async function deleteNodeContent(sessionName: string, nodeId: string): Promise<void> {
   contentHashes.delete(nodeId);
-  await deleteContent(nodeId).catch(() => {});
+  await deleteContent(sessionName, nodeId).catch(() => {});
+}
+
+export async function createSession(sessionName: string): Promise<boolean> {
+  const layout = { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } };
+  const res = await fetch(
+    `/api/session?name=${encodeURIComponent(sessionName)}&create=true`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(layout),
+    },
+  );
+  return res.ok;
 }
 
 // --- Session management ---
@@ -215,9 +222,6 @@ export async function renameSession(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ oldName, newName }),
   });
-  if (currentSessionName === oldName) {
-    currentSessionName = newName;
-  }
 }
 
 // --- Debounce utility ---

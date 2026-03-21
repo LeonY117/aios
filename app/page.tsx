@@ -1,5 +1,5 @@
-import Canvas from "@/components/canvas/Canvas";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <Canvas />;
+  redirect("/default");
 }

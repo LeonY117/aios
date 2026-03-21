@@ -18,6 +18,17 @@ export async function POST(request: Request) {
   const newPath = path.join(SESSIONS_DIR, newName);
 
   try {
+    // Check if target already exists
+    try {
+      await fs.access(newPath);
+      return NextResponse.json(
+        { error: "A workspace with that name already exists" },
+        { status: 409 },
+      );
+    } catch {
+      // Target doesn't exist — proceed with rename
+    }
+
     await fs.rename(oldPath, newPath);
     return NextResponse.json({ ok: true });
   } catch {

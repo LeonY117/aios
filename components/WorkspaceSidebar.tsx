@@ -51,9 +51,12 @@ export default function WorkspaceSidebar({
     if (showNewDialog) newInputRef.current?.focus();
   }, [showNewDialog]);
 
+  const isInvalidName = (name: string) =>
+    !name || name === "." || name === ".." || name.includes("/");
+
   const handleCreate = () => {
     const name = newName.trim();
-    if (!name || sessions.includes(name)) return;
+    if (isInvalidName(name) || sessions.includes(name)) return;
     setShowNewDialog(false);
     setNewName("");
     onCreated(name);
@@ -74,7 +77,7 @@ export default function WorkspaceSidebar({
 
   const handleRename = (oldName: string) => {
     const name = renameValue.trim();
-    if (!name || name === oldName || sessions.includes(name)) {
+    if (isInvalidName(name) || name === oldName || sessions.includes(name)) {
       setRenamingSession(null);
       return;
     }

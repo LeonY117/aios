@@ -24,8 +24,21 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const name = request.nextUrl.searchParams.get("name") ?? "default";
+  const isCreate = request.nextUrl.searchParams.get("create") === "true";
   const filePath = sessionPath(name);
   const body = await request.json();
+
+  if (isCreate) {
+    try {
+      await fs.access(path.dirname(filePath));
+      return NextResponse.json(
+        { error: "A workspace with that name already exists" },
+        { status: 409 },
+      );
+    } catch {
+      // Directory doesn't exist — proceed with creation
+    }
+  }
 
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, JSON.stringify(body, null, 2));

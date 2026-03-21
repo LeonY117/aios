@@ -28,14 +28,15 @@ import CanvasToolbar from "./CanvasToolbar";
 import WorkspaceSidebar from "@/components/WorkspaceSidebar";
 import { useCanvasPaste } from "@/lib/hooks/useCanvasPaste";
 import { viewportCenter } from "@/lib/nodes";
+import { useRouter } from "next/navigation";
 import {
   loadSession,
   saveSession,
+  createSession,
   deleteNodeContent,
+  clearContentHashes,
   deleteSession,
   renameSession,
-  setSessionName,
-  getSessionName,
   debounce,
 } from "@/lib/persistence";
 import type { ChatNodeData, ContextBlockData, SotNodeData } from "@/types";
@@ -53,13 +54,13 @@ const edgeTypes = {
 
 type SaveStatus = "idle" | "saving" | "saved";
 
-function CanvasInner() {
+function CanvasInner({ workspace }: { workspace: string }) {
+  const router = useRouter();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { screenToFlowPosition, setViewport } = useReactFlow();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [loaded, setLoaded] = useState(false);
-  const [currentSession, setCurrentSession] = useState(getSessionName);
 
   const viewportRef = useRef<Viewport>({ x: 0, y: 0, zoom: 1 });
   const nodesRef = useRef<Node[]>([]);
@@ -80,7 +81,7 @@ function CanvasInner() {
 
   const doSave = useCallback((): void => {
     setSaveStatus("saving");
-    void saveSession(nodesRef.current, edgesRef.current, viewportRef.current).then(
+    void saveSession(workspace, nodesRef.current, edgesRef.current, viewportRef.current).then(
       () => {
         setSaveStatus("saved");
         setTimeout(
@@ -89,7 +90,7 @@ function CanvasInner() {
         );
       },
     );
-  }, []);
+  }, [workspace]);
 
   type DebouncedSave = (() => void) & { flush: () => void };
   const debouncedSaveRef = useRef<DebouncedSave | null>(null);
@@ -109,7 +110,8 @@ function CanvasInner() {
   // Load session
   const loadCurrentSession = useCallback(async () => {
     setLoaded(false);
-    const session = await loadSession();
+    clearContentHashes();
+    const session = await loadSession(workspace);
     if (session) {
       setNodes(session.nodes);
       setEdges(session.edges);
@@ -122,7 +124,7 @@ function CanvasInner() {
       viewportRef.current = { x: 0, y: 0, zoom: 1 };
     }
     setLoaded(true);
-  }, [setNodes, setEdges, setViewport]);
+  }, [workspace, setNodes, setEdges, setViewport]);
 
   // Load on mount
   useEffect(() => {
@@ -136,57 +138,41 @@ function CanvasInner() {
 
   const handleSwitch = useCallback(
     async (name: string) => {
-      // Save current before switching
       flushDebouncedSave();
-      await saveSession(nodesRef.current, edgesRef.current, viewportRef.current);
-
-      setSessionName(name);
-      setCurrentSession(name);
-      await loadCurrentSession();
+      await saveSession(workspace, nodesRef.current, edgesRef.current, viewportRef.current);
+      router.push("/" + encodeURIComponent(name));
     },
-    [flushDebouncedSave, loadCurrentSession],
+    [workspace, flushDebouncedSave, router],
   );
 
   const handleCreated = useCallback(
     async (name: string) => {
-      // Save current before switching
       flushDebouncedSave();
-      await saveSession(nodesRef.current, edgesRef.current, viewportRef.current);
-
-      setSessionName(name);
-      setCurrentSession(name);
-      // New workspace starts empty — save empty state to create the directory
-      setNodes([]);
-      setEdges([]);
-      setViewport({ x: 0, y: 0, zoom: 1 });
-      viewportRef.current = { x: 0, y: 0, zoom: 1 };
-      setLoaded(true);
-      await saveSession([], [], { x: 0, y: 0, zoom: 1 });
+      await saveSession(workspace, nodesRef.current, edgesRef.current, viewportRef.current);
+      await createSession(name);
+      router.push("/" + encodeURIComponent(name));
     },
-    [flushDebouncedSave, setNodes, setEdges, setViewport],
+    [workspace, flushDebouncedSave, router],
   );
 
   const handleDeleted = useCallback(
     async (name: string) => {
       await deleteSession(name);
-      // If deleting the current session, switch to default
-      if (name === currentSession) {
-        setSessionName("default");
-        setCurrentSession("default");
-        await loadCurrentSession();
+      if (name === workspace) {
+        router.push("/default");
       }
     },
-    [currentSession, loadCurrentSession],
+    [workspace, router],
   );
 
   const handleRenamed = useCallback(
     async (oldName: string, newName: string) => {
       await renameSession(oldName, newName);
-      if (currentSession === oldName) {
-        setCurrentSession(newName);
+      if (workspace === oldName) {
+        router.replace("/" + encodeURIComponent(newName));
       }
     },
-    [currentSession],
+    [workspace, router],
   );
 
   // Auto-save on node changes
@@ -194,13 +180,13 @@ function CanvasInner() {
     (changes: NodeChange<Node>[]) => {
       for (const change of changes) {
         if (change.type === "remove") {
-          deleteNodeContent(change.id);
+          deleteNodeContent(workspace, change.id);
         }
       }
       onNodesChange(changes);
       if (loaded) triggerDebouncedSave();
     },
-    [onNodesChange, triggerDebouncedSave, loaded],
+    [workspace, onNodesChange, triggerDebouncedSave, loaded],
   );
 
   // Auto-save on edge changes
@@ -343,7 +329,7 @@ function CanvasInner() {
       </ReactFlow>
       <CanvasToolbar onAddText={addTextBlock} onAddLink={addLinkNode} onAddChat={addChatNode} onAddContextBlock={addContextBlock} />
       <WorkspaceSidebar
-        currentSession={currentSession}
+        currentSession={workspace}
         onSwitch={handleSwitch}
         onCreated={handleCreated}
         onDeleted={handleDeleted}
@@ -358,7 +344,7 @@ function CanvasInner() {
   );
 }
 
-export default function Canvas() {
+export default function Canvas({ workspace }: { workspace: string }) {
   return (
     <div className="relative w-screen h-dvh">
       {/* Override library z-index so edges/connection line render behind nodes */}
@@ -388,7 +374,7 @@ export default function Canvas() {
         }
       `}</style>
       <ReactFlowProvider>
-        <CanvasInner />
+        <CanvasInner workspace={workspace} />
       </ReactFlowProvider>
     </div>
   );
