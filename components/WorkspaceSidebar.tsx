@@ -23,6 +23,7 @@ export default function WorkspaceSidebar({
   const [newName, setNewName] = useState("");
   const [renamingSession, setRenamingSession] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [deletingSession, setDeletingSession] = useState<string | null>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const newInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,8 +62,14 @@ export default function WorkspaceSidebar({
 
   const handleDelete = (name: string) => {
     if (sessions.length <= 1) return;
-    onDeleted(name);
-    setSessions((s) => s.filter((n) => n !== name));
+    setDeletingSession(name);
+  };
+
+  const confirmDelete = () => {
+    if (!deletingSession) return;
+    onDeleted(deletingSession);
+    setSessions((s) => s.filter((n) => n !== deletingSession));
+    setDeletingSession(null);
   };
 
   const handleRename = (oldName: string) => {
@@ -221,6 +228,34 @@ export default function WorkspaceSidebar({
           </button>
         </div>
       </div>
+
+      {/* Delete confirmation dialog */}
+      {deletingSession && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20">
+          <div className="w-80 rounded-xl bg-white p-5 shadow-2xl border border-slate-200">
+            <h3 className="text-sm font-semibold text-slate-700 mb-2">
+              Delete Workspace
+            </h3>
+            <p className="text-sm text-slate-500 mb-4">
+              Are you sure you want to delete <span className="font-medium text-slate-700">{deletingSession}</span>? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeletingSession(null)}
+                className="rounded-lg px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="rounded-lg bg-red-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New workspace dialog */}
       {showNewDialog && (
