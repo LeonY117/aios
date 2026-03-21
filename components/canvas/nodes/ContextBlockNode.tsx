@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import {
   Handle,
   NodeResizer,
@@ -29,6 +29,15 @@ function selectConnectedSots(id: string) {
   };
 }
 
+function shallowArrayEqual<T>(a: T[], b: T[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 function ContextBlockNode({
   id,
   data,
@@ -48,7 +57,8 @@ function ContextBlockNode({
   );
   const [copied, setCopied] = useState(false);
   const isConnecting = useStore(selectIsConnecting);
-  const sotNodes = useStore(selectConnectedSots(id));
+  const sotSelector = useMemo(() => selectConnectedSots(id), [id]);
+  const sotNodes = useStore(sotSelector, shallowArrayEqual);
 
   const tokenEstimate = sotNodes.reduce(
     (sum, n) => sum + ((n.data as SotNodeData).content?.length ?? 0),

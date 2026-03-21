@@ -62,6 +62,20 @@ function selectConnectedSources(id: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Shallow equality for useStore — avoids re-renders when the node list
+// hasn't actually changed (same length + same references).
+// ---------------------------------------------------------------------------
+
+function shallowArrayEqual<T>(a: T[], b: T[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+// ---------------------------------------------------------------------------
 // Shared sub-components
 // ---------------------------------------------------------------------------
 
@@ -91,6 +105,9 @@ function CodeBlock({
     </SyntaxHighlighter>
   );
 }
+
+const REMARK_PLUGINS = [remarkGfm];
+const MD_COMPONENTS = { code: CodeBlock };
 
 
 function SourcesDropdown({ sources }: { sources: ChatSource[] }) {
@@ -485,7 +502,8 @@ function ChatNode({
 }: NodeProps & { data: ChatNodeData }) {
   const { setNodes, setEdges } = useReactFlow();
   const isConnecting = useStore(selectIsConnecting);
-  const sourceNodes = useStore(selectConnectedSources(id));
+  const sourceSelector = useMemo(() => selectConnectedSources(id), [id]);
+  const sourceNodes = useStore(sourceSelector, shallowArrayEqual);
   const [contextCopied, setContextCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -869,7 +887,7 @@ function ChatNode({
                 <div key={i} className="flex justify-end">
                   <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-gray-100 px-3 py-2">
                     <div className="prose prose-xs prose-gray text-xs leading-relaxed text-gray-700">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ code: CodeBlock }}>
+                      <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>
                         {msg.content}
                       </ReactMarkdown>
                     </div>
@@ -878,7 +896,7 @@ function ChatNode({
               ) : (
                 <div key={i}>
                   <div className={`prose prose-xs prose-gray max-w-none text-xs leading-relaxed text-gray-600 ${isLastAssistant ? "streaming-prose" : ""}`}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ code: CodeBlock }}>
+                    <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>
                       {msg.content}
                     </ReactMarkdown>
                   </div>

@@ -15,6 +15,8 @@ import { compileSingleContext } from "@/lib/context-export";
 import type { SotNodeData } from "@/types";
 import type { Node } from "@xyflow/react";
 
+const REHYPE_PLUGINS = [rehypeRaw];
+
 const SOURCE_ENDPOINT: Record<string, string> = {
   github: "/api/sources/github",
   notion: "/api/sources/notion",
@@ -225,7 +227,7 @@ function SotCardNode({
           <>
             <div className="nowheel min-h-0 flex-1 overflow-y-auto px-4 pb-3 cursor-text">
               <div className="mx-auto max-w-xl text-xs leading-relaxed text-gray-600 prose prose-xs prose-gray">
-                <ReactMarkdown rehypePlugins={[rehypeRaw]}>{data.content}</ReactMarkdown>
+                <ReactMarkdown rehypePlugins={REHYPE_PLUGINS}>{data.content}</ReactMarkdown>
               </div>
             </div>
             {/* Bottom bar */}
