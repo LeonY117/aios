@@ -211,7 +211,9 @@ export async function createSession(sessionName: string): Promise<boolean> {
 
 // --- Session management ---
 
-export async function listSessions(): Promise<string[]> {
+export type SessionEntry = { name: string; createdAt: string };
+
+export async function listSessions(): Promise<SessionEntry[]> {
   const res = await fetch("/api/session/list");
   const { sessions } = await res.json();
   return sessions;

@@ -160,7 +160,8 @@ function CanvasInner({ workspace }: { workspace: string }) {
     async (name: string) => {
       await deleteSession(name);
       if (name === workspace) {
-        router.push("/default");
+        // Redirect to root — it will pick the newest remaining workspace
+        router.push("/");
       }
     },
     [workspace, router],

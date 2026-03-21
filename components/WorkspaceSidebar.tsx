@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import type { SessionEntry } from "@/lib/persistence";
 
 type WorkspaceSidebarProps = {
   currentSession: string;
@@ -18,7 +19,7 @@ export default function WorkspaceSidebar({
   onRenamed,
 }: WorkspaceSidebarProps) {
   const [open, setOpen] = useState(false);
-  const [sessions, setSessions] = useState<string[]>([]);
+  const [sessions, setSessions] = useState<SessionEntry[]>([]);
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [newName, setNewName] = useState("");
   const [renamingSession, setRenamingSession] = useState<string | null>(null);
@@ -29,8 +30,8 @@ export default function WorkspaceSidebar({
 
   const fetchSessions = useCallback(async () => {
     const res = await fetch("/api/session/list");
-    const { sessions: list } = await res.json();
-    setSessions(list.length > 0 ? list : ["default"]);
+    const { sessions: list }: { sessions: SessionEntry[] } = await res.json();
+    setSessions(list);
   }, []);
 
   useEffect(() => {
@@ -51,16 +52,19 @@ export default function WorkspaceSidebar({
     if (showNewDialog) newInputRef.current?.focus();
   }, [showNewDialog]);
 
+  const sessionNames = sessions.map((s) => s.name);
+
   const isInvalidName = (name: string) =>
     !name || name === "." || name === ".." || name.includes("/");
 
   const handleCreate = () => {
     const name = newName.trim();
-    if (isInvalidName(name) || sessions.includes(name)) return;
+    if (isInvalidName(name) || sessionNames.includes(name)) return;
     setShowNewDialog(false);
     setNewName("");
     onCreated(name);
-    setSessions((s) => [...s, name].sort());
+    // Newest first — prepend
+    setSessions((s) => [{ name, createdAt: new Date().toISOString() }, ...s]);
   };
 
   const handleDelete = (name: string) => {
@@ -71,19 +75,21 @@ export default function WorkspaceSidebar({
   const confirmDelete = () => {
     if (!deletingSession) return;
     onDeleted(deletingSession);
-    setSessions((s) => s.filter((n) => n !== deletingSession));
+    setSessions((s) => s.filter((e) => e.name !== deletingSession));
     setDeletingSession(null);
   };
 
   const handleRename = (oldName: string) => {
     const name = renameValue.trim();
-    if (isInvalidName(name) || name === oldName || sessions.includes(name)) {
+    if (isInvalidName(name) || name === oldName || sessionNames.includes(name)) {
       setRenamingSession(null);
       return;
     }
     setRenamingSession(null);
     onRenamed(oldName, name);
-    setSessions((s) => s.map((n) => (n === oldName ? name : n)).sort());
+    setSessions((s) =>
+      s.map((e) => (e.name === oldName ? { ...e, name } : e)),
+    );
   };
 
   if (!open) {
@@ -137,7 +143,7 @@ export default function WorkspaceSidebar({
 
         {/* Session list */}
         <div className="flex-1 overflow-y-auto py-1">
-          {sessions.map((name) => (
+          {sessions.map(({ name }) => (
             <div
               key={name}
               className={`group flex items-center gap-1 px-3 py-1.5 cursor-pointer text-sm transition-colors ${

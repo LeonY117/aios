@@ -40,8 +40,23 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Preserve existing createdAt on saves, add it on creation
+  let createdAt = body.createdAt;
+  if (!createdAt) {
+    try {
+      const existing = JSON.parse(await fs.readFile(filePath, "utf-8"));
+      createdAt = existing.createdAt;
+    } catch {
+      // File doesn't exist yet — this is a new session
+      createdAt = new Date().toISOString();
+    }
+  }
+
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(body, null, 2));
+  await fs.writeFile(
+    filePath,
+    JSON.stringify({ ...body, createdAt }, null, 2),
+  );
 
   return NextResponse.json({ ok: true });
 }
