@@ -31,6 +31,8 @@ const sourceBadgeColors: Record<SotNodeData["sourceType"], string> = {
   url: "bg-blue-500 text-white",
   chatgpt: "bg-emerald-600 text-white",
   manual: "bg-green-600 text-white",
+  file: "bg-amber-600 text-white",
+  pdf: "bg-red-600 text-white",
 };
 
 function LoadingSkeleton({ data }: { data: SotNodeData }) {
@@ -60,7 +62,8 @@ function SotCardNode({
   data,
 }: NodeProps & { data: SotNodeData }) {
   const { setNodes } = useReactFlow();
-  const isRichText = data.sourceType === "manual" && data.isRichText;
+  const isRichText = (data.sourceType === "manual" || data.sourceType === "file") && data.isRichText;
+  const isPdf = data.sourceType === "pdf";
   const [linkCopied, setLinkCopied] = useState(false);
   const [contextCopied, setContextCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -183,7 +186,15 @@ function SotCardNode({
         )}
 
         {/* Content */}
-        {isRichText ? (
+        {isPdf && data.pdfUrl ? (
+          <div className="nowheel min-h-0 flex-1 overflow-y-auto">
+            <iframe
+              src={data.pdfUrl}
+              className="h-full w-full border-0"
+              title={data.title}
+            />
+          </div>
+        ) : isRichText ? (
           <div className="nodrag min-h-0 flex-1 overflow-hidden cursor-text">
             <RichTextEditor
               content={data.content}

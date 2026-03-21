@@ -27,6 +27,7 @@ import CenterConnectionLine from "./edges/CenterConnectionLine";
 import CanvasToolbar from "./CanvasToolbar";
 import WorkspaceSidebar from "@/components/WorkspaceSidebar";
 import { useCanvasPaste } from "@/lib/hooks/useCanvasPaste";
+import { handleFileUpload } from "@/lib/hooks/useFileUpload";
 import { viewportCenter } from "@/lib/nodes";
 import { useRouter } from "next/navigation";
 import {
@@ -286,6 +287,32 @@ function CanvasInner({ workspace }: { workspace: string }) {
     setNodes((nds) => [...nds, node]);
   }, [screenToFlowPosition, setNodes]);
 
+  const addFileNode = useCallback(
+    (file: File, position?: { x: number; y: number }) => {
+      const pos = position ?? viewportCenter(screenToFlowPosition);
+      handleFileUpload(file, pos, setNodes, workspace);
+    },
+    [screenToFlowPosition, setNodes, workspace],
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files?.[0];
+      if (!file) return;
+      const ext = file.name.split(".").pop()?.toLowerCase();
+      if (!ext || !["txt", "md", "pdf"].includes(ext)) return;
+      const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      addFileNode(file, position);
+    },
+    [screenToFlowPosition, addFileNode],
+  );
+
   const addContextBlock = useCallback(() => {
     const position = viewportCenter(screenToFlowPosition);
     const data: ContextBlockData = { title: "Context Block" };
@@ -315,6 +342,8 @@ function CanvasInner({ workspace }: { workspace: string }) {
         onConnectStart={() => document.body.classList.add("connecting-edge")}
         onConnectEnd={() => document.body.classList.remove("connecting-edge")}
         onViewportChange={onViewportChange}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={{
@@ -327,7 +356,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
       >
         <Background variant={BackgroundVariant.Dots} />
       </ReactFlow>
-      <CanvasToolbar onAddText={addTextBlock} onAddLink={addLinkNode} onAddChat={addChatNode} onAddContextBlock={addContextBlock} />
+      <CanvasToolbar onAddText={addTextBlock} onAddLink={addLinkNode} onAddChat={addChatNode} onAddContextBlock={addContextBlock} onAddFile={addFileNode} />
       <WorkspaceSidebar
         currentSession={workspace}
         onSwitch={handleSwitch}

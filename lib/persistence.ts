@@ -135,6 +135,11 @@ export async function loadSession(sessionName: string): Promise<{
           data.content = content;
         }
 
+        // Reconstruct pdfUrl for PDF nodes
+        if (data.sourceType === "pdf") {
+          data.pdfUrl = `/api/session/files?name=${encodeURIComponent(sessionName)}&id=${node.id}`;
+        }
+
         // Initialize content hash so first save doesn't re-write unchanged content
         if (content) {
           contentHashes.set(node.id, hashContent(content));
@@ -184,6 +189,11 @@ export async function saveSession(
 export async function deleteNodeContent(sessionName: string, nodeId: string): Promise<void> {
   contentHashes.delete(nodeId);
   await deleteContent(sessionName, nodeId).catch(() => {});
+  // Also clean up any associated PDF file
+  await fetch(
+    `/api/session/files?name=${encodeURIComponent(sessionName)}&id=${nodeId}`,
+    { method: "DELETE" },
+  ).catch(() => {});
 }
 
 export async function createSession(sessionName: string): Promise<boolean> {

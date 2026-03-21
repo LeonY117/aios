@@ -1,10 +1,13 @@
 "use client";
 
+import { useRef } from "react";
+
 type CanvasToolbarProps = {
   onAddText: () => void;
   onAddLink: () => void;
   onAddChat: () => void;
   onAddContextBlock: () => void;
+  onAddFile: (file: File) => void;
 };
 
 export default function CanvasToolbar({
@@ -12,7 +15,10 @@ export default function CanvasToolbar({
   onAddLink,
   onAddChat,
   onAddContextBlock,
+  onAddFile,
 }: CanvasToolbarProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-1 py-1 shadow-lg">
       {/* Text button */}
@@ -36,6 +42,41 @@ export default function CanvasToolbar({
           <line x1="12" y1="4" x2="12" y2="20" />
         </svg>
       </button>
+
+      <div className="h-5 w-px bg-gray-200" />
+
+      {/* Upload button */}
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        title="Upload file (txt, md, pdf)"
+        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".txt,.md,.pdf"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onAddFile(file);
+          e.target.value = "";
+        }}
+      />
 
       <div className="h-5 w-px bg-gray-200" />
 

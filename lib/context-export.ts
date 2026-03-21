@@ -45,8 +45,9 @@ function nodeToSection(node: ContextNode): string {
   }
 
   const d = node.data as SotNodeData;
+  const typeLabel = d.sourceType === "pdf" ? "pdf (extracted text)" : d.sourceType === "file" ? "uploaded file" : d.sourceType;
   const lines: string[] = [`## Source: ${d.title}`];
-  lines.push(`**Type:** ${d.sourceType}`);
+  lines.push(`**Type:** ${typeLabel}`);
   if (d.sourceUrl) lines.push(`**URL:** ${d.sourceUrl}`);
   lines.push("", htmlToMarkdown(d.content));
   return lines.join("\n");
