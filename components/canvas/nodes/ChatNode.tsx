@@ -18,6 +18,7 @@ import {
   type ReactFlowState,
 } from "@xyflow/react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import ConnectorHandle from "./ConnectorHandle";
@@ -868,7 +869,7 @@ function ChatNode({
                 <div key={i} className="flex justify-end">
                   <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-gray-100 px-3 py-2">
                     <div className="prose prose-xs prose-gray text-xs leading-relaxed text-gray-700">
-                      <ReactMarkdown components={{ code: CodeBlock }}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ code: CodeBlock }}>
                         {msg.content}
                       </ReactMarkdown>
                     </div>
@@ -877,7 +878,7 @@ function ChatNode({
               ) : (
                 <div key={i}>
                   <div className={`prose prose-xs prose-gray max-w-none text-xs leading-relaxed text-gray-600 ${isLastAssistant ? "streaming-prose" : ""}`}>
-                    <ReactMarkdown components={{ code: CodeBlock }}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ code: CodeBlock }}>
                       {msg.content}
                     </ReactMarkdown>
                   </div>
