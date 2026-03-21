@@ -781,7 +781,7 @@ function ChatNode({
           minWidth={300}
           minHeight={200}
           lineClassName="!border-transparent !border-[3px]"
-          handleClassName="!hidden"
+          handleClassName="!w-3 !h-3 !bg-transparent !border-0"
         />
         <ConnectorHandle type="source" />
         <div className="h-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-gray-300">
@@ -809,7 +809,7 @@ function ChatNode({
         minWidth={300}
         minHeight={200}
         lineClassName="!border-transparent !border-[3px]"
-        handleClassName="!hidden"
+        handleClassName="!w-3 !h-3 !bg-transparent !border-0"
       />
       <ConnectorHandle type="source" />
       {/* Full-size invisible target handle — only active during edge drag */}

@@ -143,7 +143,7 @@ function SotCardNode({
           minWidth={280}
           minHeight={120}
           lineClassName="!border-transparent !border-[3px]"
-          handleClassName="!hidden"
+          handleClassName="!w-3 !h-3 !bg-transparent !border-0"
         />
         <ConnectorHandle type="source" />
         <LoadingSkeleton data={data} />
@@ -158,7 +158,7 @@ function SotCardNode({
         minWidth={280}
         minHeight={120}
         lineClassName="!border-transparent !border-[3px]"
-        handleClassName="!hidden"
+        handleClassName="!w-3 !h-3 !bg-transparent !border-0"
       />
       <ConnectorHandle type="source" />
       <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm transition-colors duration-150 hover:border-gray-300">

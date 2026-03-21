@@ -71,7 +71,7 @@ function ContextBlockNode({
         minWidth={240}
         minHeight={160}
         lineClassName="!border-transparent !border-[3px]"
-        handleClassName="!hidden"
+        handleClassName="!w-3 !h-3 !bg-transparent !border-0"
       />
       {/* Full-size invisible target handle — only active during edge drag */}
       <Handle
