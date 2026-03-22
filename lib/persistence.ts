@@ -211,7 +211,7 @@ export async function createSession(sessionName: string): Promise<boolean> {
 
 // --- Session management ---
 
-export type SessionEntry = { name: string; createdAt: string };
+export type SessionEntry = { name: string; createdAt: string; updatedAt: string };
 
 export async function listSessions(): Promise<SessionEntry[]> {
   const res = await fetch("/api/session/list");

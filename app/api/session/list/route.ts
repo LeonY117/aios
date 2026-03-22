@@ -4,7 +4,7 @@ import path from "path";
 
 const SESSIONS_DIR = path.join(process.cwd(), "sessions");
 
-type SessionEntry = { name: string; createdAt: string };
+type SessionEntry = { name: string; createdAt: string; updatedAt: string };
 
 export async function GET() {
   try {
@@ -14,24 +14,30 @@ export async function GET() {
     const sessions: SessionEntry[] = await Promise.all(
       dirs.map(async (dir) => {
         const sessionFile = path.join(SESSIONS_DIR, dir.name, "session.json");
+        const stat = await fs.stat(sessionFile).catch(() => null);
+        const mtime = stat?.mtime.toISOString();
         try {
           const data = JSON.parse(await fs.readFile(sessionFile, "utf-8"));
           if (data.createdAt) {
-            return { name: dir.name, createdAt: data.createdAt };
+            return {
+              name: dir.name,
+              createdAt: data.createdAt,
+              updatedAt: data.updatedAt ?? mtime ?? data.createdAt,
+            };
           }
         } catch {
           // session.json missing or malformed
         }
-        // Fallback: use directory birthtime for sessions without createdAt
-        const stat = await fs.stat(path.join(SESSIONS_DIR, dir.name));
-        return { name: dir.name, createdAt: stat.birthtime.toISOString() };
+        const dirStat = await fs.stat(path.join(SESSIONS_DIR, dir.name));
+        const fallback = dirStat.birthtime.toISOString();
+        return { name: dir.name, createdAt: fallback, updatedAt: mtime ?? fallback };
       }),
     );
 
-    // Sort by creation date, newest first
+    // Sort by last edit, newest first
     sessions.sort(
       (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
 
     return NextResponse.json({ sessions });

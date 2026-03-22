@@ -52,10 +52,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const updatedAt = new Date().toISOString();
+
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(
     filePath,
-    JSON.stringify({ ...body, createdAt }, null, 2),
+    JSON.stringify({ ...body, createdAt, updatedAt }, null, 2),
   );
 
   return NextResponse.json({ ok: true });

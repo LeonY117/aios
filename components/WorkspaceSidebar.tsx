@@ -35,12 +35,12 @@ export default function WorkspaceSidebar({
   }, []);
 
   useEffect(() => {
-    // This is a mount-time load from an external system (the API).
-    // The eslint rule here is overly strict for async data fetching, so we
-    // explicitly allow it.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchSessions();
-  }, [fetchSessions]);
+    // Re-fetch session list each time sidebar opens so sort order is fresh
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchSessions();
+    }
+  }, [open, currentSession, fetchSessions]);
 
   // Sidebar toggle — avoid Cmd+B as it conflicts with bold in text editor
 
@@ -64,7 +64,8 @@ export default function WorkspaceSidebar({
     setNewName("");
     onCreated(name);
     // Newest first — prepend
-    setSessions((s) => [{ name, createdAt: new Date().toISOString() }, ...s]);
+    const now = new Date().toISOString();
+    setSessions((s) => [{ name, createdAt: now, updatedAt: now }, ...s]);
   };
 
   const handleDelete = (name: string) => {
