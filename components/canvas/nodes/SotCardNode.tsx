@@ -17,6 +17,13 @@ import type { Node } from "@xyflow/react";
 
 const REHYPE_PLUGINS = [rehypeRaw];
 
+/** Extract plain text of the first block element from HTML. */
+function extractFirstLine(html: string): string {
+  const match = html.match(/<(?:h[1-6]|p|li)[^>]*>(.*?)<\/(?:h[1-6]|p|li)>/);
+  if (!match) return "";
+  return match[1].replace(/<[^>]*>/g, "").trim();
+}
+
 const SOURCE_ENDPOINT: Record<string, string> = {
   github: "/api/sources/github",
   notion: "/api/sources/notion",
@@ -117,11 +124,15 @@ function SotCardNode({
   const handleContentChange = useCallback(
     (html: string) => {
       setNodes((nds) =>
-        nds.map((n) =>
-          n.id === id
-            ? { ...n, data: { ...(n.data as SotNodeData), content: html } }
-            : n,
-        ),
+        nds.map((n) => {
+          if (n.id !== id) return n;
+          const d = n.data as SotNodeData;
+          const updates: Partial<SotNodeData> = { content: html };
+          if (d.sourceType === "manual") {
+            updates.title = extractFirstLine(html) || "Untitled";
+          }
+          return { ...n, data: { ...d, ...updates } };
+        }),
       );
     },
     [id, setNodes],
@@ -198,6 +209,7 @@ function SotCardNode({
           </div>
         ) : isRichText ? (
           <div className="nodrag min-h-0 flex-1 overflow-hidden cursor-text">
+            <div className="px-4 pt-1 pb-0.5 text-[12px] font-semibold text-gray-300 truncate text-center">{data.title}</div>
             <RichTextEditor
               content={data.content}
               onChange={handleContentChange}
