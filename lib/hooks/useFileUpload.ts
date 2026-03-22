@@ -1,5 +1,6 @@
 import type { Node } from "@xyflow/react";
 import type { SotNodeData } from "@/types";
+import { topZIndex } from "@/lib/nodes";
 
 type SetNodes = (updater: (nodes: Node[]) => Node[]) => void;
 
@@ -33,7 +34,7 @@ export async function handleFileUpload(
     } satisfies SotNodeData,
     style: { width: 280, height: 360 },
   };
-  setNodes((nds) => [...nds, skeleton]);
+  setNodes((nds) => [...nds, { ...skeleton, zIndex: topZIndex(nds) }]);
 
   const formData = new FormData();
   formData.append("file", file);

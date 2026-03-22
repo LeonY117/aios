@@ -3,6 +3,7 @@ import { useReactFlow, type Node } from "@xyflow/react";
 import { detectSource } from "@/lib/sources/detect";
 import { viewportCenter } from "@/lib/nodes";
 import type { SotNodeData, ChatNodeData, ChatMessage } from "@/types";
+import { topZIndex } from "@/lib/nodes";
 
 type SetNodes = React.Dispatch<React.SetStateAction<Node[]>>;
 
@@ -46,6 +47,7 @@ export function handleLinkAdd(
         position,
         data,
         style: { width: 280, height: 360 },
+        zIndex: topZIndex(nds),
       },
     ]);
     return;
@@ -69,6 +71,7 @@ export function handleLinkAdd(
         position,
         data: loadingData,
         style: { width: 380, height: 420 },
+        zIndex: topZIndex(nds),
       },
     ]);
 
@@ -145,6 +148,7 @@ export function handleLinkAdd(
       position,
       data: loadingData,
       style: { width: 288, height: 320 },
+      zIndex: topZIndex(nds),
     },
   ]);
 

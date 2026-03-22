@@ -28,7 +28,7 @@ import CanvasToolbar from "./CanvasToolbar";
 import WorkspaceSidebar from "@/components/WorkspaceSidebar";
 import { useCanvasPaste } from "@/lib/hooks/useCanvasPaste";
 import { handleFileUpload } from "@/lib/hooks/useFileUpload";
-import { viewportCenter } from "@/lib/nodes";
+import { viewportCenter, topZIndex } from "@/lib/nodes";
 import { useRouter } from "next/navigation";
 import {
   loadSession,
@@ -248,26 +248,34 @@ function CanvasInner({ workspace }: { workspace: string }) {
       isRichText: true,
       isEditing: true,
     };
-    const node: Node = {
-      id: crypto.randomUUID(),
-      type: "sotCard",
-      position,
-      data,
-      style: { width: 280, height: 360 },
-    };
-    setNodes((nds) => [...nds, node]);
+    setNodes((nds) => [
+      ...nds.map((n) => (n.selected ? { ...n, selected: false } : n)),
+      {
+        id: crypto.randomUUID(),
+        type: "sotCard",
+        position,
+        data,
+        style: { width: 280, height: 360 },
+        zIndex: topZIndex(nds),
+        selected: true,
+      },
+    ]);
   }, [screenToFlowPosition, setNodes]);
 
   const addLinkNode = useCallback(() => {
     const position = viewportCenter(screenToFlowPosition);
-    const node: Node = {
-      id: crypto.randomUUID(),
-      type: "linkInput",
-      position,
-      data: {},
-      style: { width: 360, height: 140 },
-    };
-    setNodes((nds) => [...nds, node]);
+    setNodes((nds) => [
+      ...nds.map((n) => (n.selected ? { ...n, selected: false } : n)),
+      {
+        id: crypto.randomUUID(),
+        type: "linkInput",
+        position,
+        data: {},
+        style: { width: 360, height: 140 },
+        zIndex: topZIndex(nds),
+        selected: true,
+      },
+    ]);
   }, [screenToFlowPosition, setNodes]);
 
   const addChatNode = useCallback(() => {
@@ -278,14 +286,18 @@ function CanvasInner({ workspace }: { workspace: string }) {
       messages: [],
       webSearch: false,
     };
-    const node: Node = {
-      id: crypto.randomUUID(),
-      type: "chatWindow",
-      position,
-      data,
-      style: { width: 380, height: 500 },
-    };
-    setNodes((nds) => [...nds, node]);
+    setNodes((nds) => [
+      ...nds.map((n) => (n.selected ? { ...n, selected: false } : n)),
+      {
+        id: crypto.randomUUID(),
+        type: "chatWindow",
+        position,
+        data,
+        style: { width: 380, height: 500 },
+        zIndex: topZIndex(nds),
+        selected: true,
+      },
+    ]);
   }, [screenToFlowPosition, setNodes]);
 
   const addFileNode = useCallback(
@@ -317,14 +329,18 @@ function CanvasInner({ workspace }: { workspace: string }) {
   const addContextBlock = useCallback(() => {
     const position = viewportCenter(screenToFlowPosition);
     const data: ContextBlockData = { title: "Context Block" };
-    const node: Node = {
-      id: crypto.randomUUID(),
-      type: "contextBlock",
-      position,
-      data,
-      style: { width: 280, height: 280 },
-    };
-    setNodes((nds) => [...nds, node]);
+    setNodes((nds) => [
+      ...nds.map((n) => (n.selected ? { ...n, selected: false } : n)),
+      {
+        id: crypto.randomUUID(),
+        type: "contextBlock",
+        position,
+        data,
+        style: { width: 280, height: 280 },
+        zIndex: topZIndex(nds),
+        selected: true,
+      },
+    ]);
   }, [screenToFlowPosition, setNodes]);
 
   const draggableNodes = useMemo(
