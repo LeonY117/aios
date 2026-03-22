@@ -33,10 +33,10 @@ function LinkInputNode({
         isVisible={selected}
         minWidth={320}
         minHeight={140}
-        lineClassName="!border-transparent !border-[6px] hover:!border-blue-200 !transition-colors !duration-150"
-        handleClassName="!w-3 !h-3 !bg-blue-400 !border-blue-400 !rounded-full !opacity-0 hover:!opacity-100 !transition-opacity !duration-150"
+        lineClassName="!border-transparent !border-[3px]"
+        handleClassName="!w-3 !h-3 !bg-transparent !border-0"
       />
-      <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
+      <div className={`flex h-full flex-col rounded-lg border bg-white shadow-sm transition-all duration-150 ${selected ? "border-blue-400 ring-2 ring-blue-400/30" : "border-gray-200 hover:border-gray-300"}`}>
         <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
           <div className="h-[3px] w-6 rounded-full bg-gray-200" />
         </div>
