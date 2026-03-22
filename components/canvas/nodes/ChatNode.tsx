@@ -25,7 +25,7 @@ import ConnectorHandle from "./ConnectorHandle";
 import EditableTitle from "./EditableTitle";
 import { compileSingleContext } from "@/lib/context-export";
 import { ALL_MODELS, DEFAULT_MODEL_ID, getModelName, modelSupportsWebSearch } from "@/lib/ai/models-client";
-import type { ChatNodeData, ChatMessage, ChatSource, AttachedSot, SotNodeData, ContextBlockData } from "@/types";
+import type { ChatNodeData, ChatMessage, ChatSource, AttachedSot, SotNodeData } from "@/types";
 import type { StreamEvent } from "@/app/api/chat/route";
 import type { Node } from "@xyflow/react";
 
@@ -499,6 +499,7 @@ const sourceBadgeColors: Record<string, string> = {
 function ChatNode({
   id,
   data,
+  selected,
 }: NodeProps & { data: ChatNodeData }) {
   const { setNodes, setEdges } = useReactFlow();
   const isConnecting = useStore(selectIsConnecting);
@@ -640,6 +641,25 @@ function ChatNode({
         isStreaming: true,
       });
 
+      // Auto-title: fire immediately on first message
+      const isFirstMessage = (data.messages ?? []).length === 0;
+      if (
+        isFirstMessage &&
+        data.source === "interactive" &&
+        data.title === "New conversation"
+      ) {
+        fetch("/api/chat/title", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((r) => {
+            if (r?.title) updateData({ title: r.title });
+          })
+          .catch(() => {});
+      }
+
       const abortController = new AbortController();
       abortRef.current = abortController;
 
@@ -743,6 +763,7 @@ function ChatNode({
             ],
             isStreaming: false,
           });
+
         } else {
           updateData({
             messages: [
@@ -776,7 +797,15 @@ function ChatNode({
         });
       }
     },
-    [data.messages, data.modelId, attachedSots, data.webSearch, updateData],
+    [
+      data.messages,
+      data.modelId,
+      data.source,
+      data.title,
+      attachedSots,
+      data.webSearch,
+      updateData,
+    ],
   );
 
   const handleStop = useCallback(() => {
@@ -803,7 +832,7 @@ function ChatNode({
           handleClassName="!w-3 !h-3 !bg-transparent !border-0"
         />
         <ConnectorHandle type="source" />
-        <div className="h-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-gray-300">
+        <div className={`h-full rounded-lg border bg-white p-4 shadow-sm transition-all duration-150 ${selected ? "border-blue-400 ring-2 ring-blue-400/30" : "border-gray-200 hover:border-gray-300"}`}>
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-900 truncate">
               Loading conversation…
@@ -845,7 +874,7 @@ function ChatNode({
           }}
         />
       )}
-      <div className="chat-drop-content flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm transition-colors duration-150 hover:border-gray-300">
+      <div className={`chat-drop-content flex h-full flex-col rounded-lg border bg-white shadow-sm transition-all duration-150 ${selected ? "border-blue-400 ring-2 ring-blue-400/30" : "border-gray-200 hover:border-gray-300"}`}>
         {/* Drag handle */}
         <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
           <div className="h-[3px] w-6 rounded-full bg-gray-200" />

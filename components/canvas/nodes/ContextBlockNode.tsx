@@ -41,6 +41,7 @@ function shallowArrayEqual<T>(a: T[], b: T[]): boolean {
 function ContextBlockNode({
   id,
   data,
+  selected,
 }: NodeProps & { data: ContextBlockData }) {
   const { setNodes } = useReactFlow();
   const handleTitleChange = useCallback(
@@ -95,7 +96,7 @@ function ContextBlockNode({
           pointerEvents: isConnecting ? "all" : "none",
         }}
       />
-      <div className="context-drop-content flex h-full flex-col rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50 shadow-sm transition-all duration-150 hover:border-indigo-400">
+      <div className={`context-drop-content flex h-full flex-col rounded-lg border-2 border-dashed bg-indigo-50 shadow-sm transition-all duration-150 ${selected ? "border-blue-400 ring-2 ring-blue-400/30" : "border-indigo-300 hover:border-indigo-400"}`}>
         {/* Drag handle */}
         <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
           <div className="h-[3px] w-6 rounded-full bg-indigo-200" />

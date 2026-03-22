@@ -69,6 +69,7 @@ function LoadingSkeleton({ data }: { data: SotNodeData }) {
 function SotCardNode({
   id,
   data,
+  selected,
 }: NodeProps & { data: SotNodeData }) {
   const { setNodes } = useReactFlow();
   const isRichText = (data.sourceType === "manual" || data.sourceType === "file") && data.isRichText;
@@ -177,7 +178,7 @@ function SotCardNode({
         handleClassName="!w-3 !h-3 !bg-transparent !border-0"
       />
       <ConnectorHandle type="source" />
-      <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white shadow-sm transition-colors duration-150 hover:border-gray-300">
+      <div className={`flex h-full flex-col rounded-lg border bg-white shadow-sm transition-all duration-150 ${selected ? "border-blue-400 ring-2 ring-blue-400/30" : "border-gray-200 hover:border-gray-300"}`}>
         {/* Drag handle */}
         <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
           <div className="h-[3px] w-6 rounded-full bg-gray-200" />
