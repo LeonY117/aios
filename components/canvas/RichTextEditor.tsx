@@ -67,7 +67,7 @@ export default function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "nodrag nowheel prose prose-sm prose-gray max-w-none min-h-[60px] px-4 py-2 outline-none focus:outline-none leading-normal",
+          "nodrag nowheel nokey prose prose-sm prose-gray max-w-none min-h-[60px] px-4 py-2 outline-none focus:outline-none leading-normal",
       },
       handleDOMEvents: {
         wheel: (_view, event) => {
