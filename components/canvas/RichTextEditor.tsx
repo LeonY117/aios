@@ -8,6 +8,7 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import { InputRule } from "@tiptap/core";
 import { useEffect, useRef } from "react";
+import { clearPendingEditorFocus } from "@/lib/editor-focus-signal";
 
 // Extend TaskItem to also trigger on bare "[]" (not just "[ ]")
 const CustomTaskItem = TaskItem.extend({
@@ -77,6 +78,14 @@ export default function RichTextEditor({
       },
     },
   });
+
+  // Safety net: ensure focus when autoFocus is set (Tiptap's autofocus can be unreliable with async React Flow rendering)
+  useEffect(() => {
+    if (autoFocus && editor) {
+      editor.commands.focus("end");
+      clearPendingEditorFocus();
+    }
+  }, [autoFocus, editor]);
 
   if (!editor) return null;
 

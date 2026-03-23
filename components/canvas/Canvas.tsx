@@ -6,6 +6,7 @@ import {
   ReactFlowProvider,
   Background,
   BackgroundVariant,
+  SelectionMode,
   useNodesState,
   useEdgesState,
   useReactFlow,
@@ -17,6 +18,7 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { setPendingEditorFocus } from "@/lib/editor-focus-signal";
 
 import SotCardNode from "./nodes/SotCardNode";
 import ChatNode from "./nodes/ChatNode";
@@ -25,6 +27,7 @@ import LinkInputNode from "./nodes/LinkInputNode";
 import CenterEdge from "./edges/CenterEdge";
 import CenterConnectionLine from "./edges/CenterConnectionLine";
 import CanvasToolbar from "./CanvasToolbar";
+import SelectionToolbar from "./SelectionToolbar";
 import WorkspaceSidebar from "@/components/WorkspaceSidebar";
 import { useCanvasPaste } from "@/lib/hooks/useCanvasPaste";
 import { handleFileUpload } from "@/lib/hooks/useFileUpload";
@@ -209,18 +212,41 @@ function CanvasInner({ workspace }: { workspace: string }) {
     [triggerDebouncedSave, loaded],
   );
 
-  // Cmd+S handler
+  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+      if (!e.metaKey && !e.ctrlKey) return;
+
+      // Cmd+S — save
+      if (e.key === "s") {
         e.preventDefault();
         flushDebouncedSave();
         doSave();
+        return;
+      }
+
+      // Cmd+A — select all SOT nodes (skip if input is focused)
+      if (e.key === "a") {
+        const active = document.activeElement;
+        if (
+          active instanceof HTMLInputElement ||
+          active instanceof HTMLTextAreaElement ||
+          (active instanceof HTMLElement && active.isContentEditable)
+        ) {
+          return;
+        }
+        e.preventDefault();
+        setNodes((nds) =>
+          nds.map((n) => ({
+            ...n,
+            selected: n.type === "sotCard" || n.type === "contextBlock",
+          })),
+        );
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [doSave, flushDebouncedSave]);
+  }, [doSave, flushDebouncedSave, setNodes]);
 
   // Trigger save when nodes are added via paste
   const prevNodeCount = useRef(0);
@@ -240,13 +266,20 @@ function CanvasInner({ workspace }: { workspace: string }) {
   );
 
   const addTextBlock = useCallback(() => {
+    const active = document.activeElement;
+    const chatHasFocus = active instanceof HTMLTextAreaElement;
+
+    if (!chatHasFocus) {
+      setPendingEditorFocus();
+    }
+
     const position = viewportCenter(screenToFlowPosition);
     const data: SotNodeData = {
       title: "Untitled",
       content: "",
       sourceType: "manual",
       isRichText: true,
-      isEditing: true,
+      isEditing: !chatHasFocus,
     };
     setNodes((nds) => [
       ...nds.map((n) => (n.selected ? { ...n, selected: false } : n)),
@@ -343,6 +376,75 @@ function CanvasInner({ workspace }: { workspace: string }) {
     ]);
   }, [screenToFlowPosition, setNodes]);
 
+  // Capture selected SOT nodes at drag start — clicking a drag handle may
+  // deselect other nodes before onNodeDragStop fires.
+  const dragSelectionRef = useRef<Node[]>([]);
+  const onNodeDragStart = useCallback(
+    (_event: React.MouseEvent, _node: Node, _draggedNodes: Node[]) => {
+      dragSelectionRef.current = nodes.filter(
+        (n) => n.selected && (n.type === "sotCard" || n.type === "contextBlock"),
+      );
+    },
+    [nodes],
+  );
+
+  // When dragged SOT nodes are dropped onto a chat, create edges for all of them
+  const onNodeDragStop = useCallback(
+    (_event: React.MouseEvent, draggedNode: Node, draggedNodes: Node[]) => {
+      // Use the selection captured at drag start, falling back to draggedNodes
+      const sotNodes =
+        dragSelectionRef.current.length > 0
+          ? dragSelectionRef.current
+          : draggedNodes.filter(
+              (n) => n.type === "sotCard" || n.type === "contextBlock",
+            );
+      dragSelectionRef.current = [];
+      if (sotNodes.length === 0) return;
+
+      // Use the dragged node's current position to find which SOT positions to check
+      // (draggedNodes have updated positions, but dragSelectionRef may have stale positions)
+      const positionMap = new Map(
+        draggedNodes.map((n) => [n.id, n.position]),
+      );
+
+      // Find chat nodes that overlap with any dragged SOT center
+      const chatNodes = nodes.filter((n) => n.type === "chatWindow");
+      for (const chat of chatNodes) {
+        const cw = chat.measured?.width ?? (chat.style?.width as number) ?? 380;
+        const ch = chat.measured?.height ?? (chat.style?.height as number) ?? 500;
+
+        const overlaps = sotNodes.some((sot) => {
+          const pos = positionMap.get(sot.id) ?? sot.position;
+          const sw = sot.measured?.width ?? (sot.style?.width as number) ?? 280;
+          const sh = sot.measured?.height ?? (sot.style?.height as number) ?? 360;
+          const cx = pos.x + sw / 2;
+          const cy = pos.y + sh / 2;
+          return (
+            cx >= chat.position.x &&
+            cx <= chat.position.x + cw &&
+            cy >= chat.position.y &&
+            cy <= chat.position.y + ch
+          );
+        });
+
+        if (overlaps) {
+          setEdges((eds) => {
+            let next = [...eds];
+            for (const sot of sotNodes) {
+              if (!next.some((e) => e.source === sot.id && e.target === chat.id)) {
+                next = addEdge({ source: sot.id, target: chat.id, sourceHandle: null, targetHandle: null }, next);
+              }
+            }
+            return next;
+          });
+          if (loaded) triggerDebouncedSave();
+          break; // attach to the first overlapping chat only
+        }
+      }
+    },
+    [nodes, setEdges, triggerDebouncedSave, loaded],
+  );
+
   const draggableNodes = useMemo(
     () => nodes.map((n) => (n.dragHandle === ".custom-drag-handle" ? n : { ...n, dragHandle: ".custom-drag-handle" })),
     [nodes],
@@ -356,6 +458,8 @@ function CanvasInner({ workspace }: { workspace: string }) {
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDragStop={onNodeDragStop}
         onConnectStart={() => document.body.classList.add("connecting-edge")}
         onConnectEnd={() => document.body.classList.remove("connecting-edge")}
         onViewportChange={onViewportChange}
@@ -368,12 +472,68 @@ function CanvasInner({ workspace }: { workspace: string }) {
           style: { stroke: "#94a3b8" },
         }}
         connectionLineComponent={CenterConnectionLine}
+        selectionOnDrag
+        panOnDrag={[1, 2]}
+        selectionMode={SelectionMode.Partial}
         minZoom={0.25}
         maxZoom={2}
       >
         <Background variant={BackgroundVariant.Dots} />
       </ReactFlow>
       <CanvasToolbar onAddText={addTextBlock} onAddLink={addLinkNode} onAddChat={addChatNode} onAddContextBlock={addContextBlock} onAddFile={addFileNode} />
+      {(() => {
+        const selectedSots = nodes.filter(
+          (n) => n.selected && (n.type === "sotCard" || n.type === "contextBlock"),
+        );
+        const chatNodes = nodes.filter((n) => n.type === "chatWindow");
+
+        const attachToChat = (chatId: string) => {
+          setEdges((eds) => {
+            let next = [...eds];
+            for (const sot of selectedSots) {
+              if (!next.some((e) => e.source === sot.id && e.target === chatId)) {
+                next = addEdge({ source: sot.id, target: chatId, sourceHandle: null, targetHandle: null }, next);
+              }
+            }
+            return next;
+          });
+          if (loaded) triggerDebouncedSave();
+        };
+
+        const newChatWithContext = () => {
+          const chatId = crypto.randomUUID();
+          const position = viewportCenter(screenToFlowPosition);
+          const chatData: ChatNodeData = {
+            title: "New conversation",
+            source: "interactive",
+            messages: [],
+            webSearch: false,
+          };
+          setNodes((nds) => [
+            ...nds.map((n) => (n.selected ? { ...n, selected: false } : n)),
+            {
+              id: chatId,
+              type: "chatWindow",
+              position: { x: position.x + 200, y: position.y },
+              data: chatData,
+              style: { width: 380, height: 500 },
+              zIndex: topZIndex(nds),
+              selected: true,
+            },
+          ]);
+          // Attach after creating the node
+          setTimeout(() => attachToChat(chatId), 0);
+        };
+
+        return selectedSots.length >= 2 ? (
+          <SelectionToolbar
+            selectedCount={selectedSots.length}
+            chatNodes={chatNodes}
+            onAttachToChat={attachToChat}
+            onNewChatWithContext={newChatWithContext}
+          />
+        ) : null;
+      })()}
       <WorkspaceSidebar
         currentSession={workspace}
         onSwitch={handleSwitch}

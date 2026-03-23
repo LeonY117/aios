@@ -4,6 +4,7 @@ import { detectSource } from "@/lib/sources/detect";
 import { viewportCenter } from "@/lib/nodes";
 import type { SotNodeData, ChatNodeData, ChatMessage } from "@/types";
 import { topZIndex } from "@/lib/nodes";
+import { isPendingEditorFocus } from "@/lib/editor-focus-signal";
 
 type SetNodes = React.Dispatch<React.SetStateAction<Node[]>>;
 
@@ -208,6 +209,11 @@ export function useCanvasPaste(setNodes: SetNodes) {
         active instanceof HTMLTextAreaElement ||
         (active instanceof HTMLElement && active.isContentEditable)
       ) {
+        return;
+      }
+
+      // A new editor is about to mount — let it handle the paste
+      if (isPendingEditorFocus()) {
         return;
       }
 
