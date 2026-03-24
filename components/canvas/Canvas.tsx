@@ -180,18 +180,36 @@ function CanvasInner({ workspace }: { workspace: string }) {
     [workspace, router],
   );
 
+  // Snapshot of selected SOTs — captured before deselection so drag-to-attach works
+  const dragSelectionRef = useRef<Node[]>([]);
+
   // Auto-save on node changes
   const handleNodesChange = useCallback(
     (changes: NodeChange<Node>[]) => {
+      // Before applying deselection, snapshot currently-selected SOTs so
+      // drag-to-attach can use the full set even after React Flow deselects.
+      const isDeselecting = changes.some(
+        (c) => c.type === "select" && !c.selected,
+      );
+      if (isDeselecting) {
+        const selected = nodes.filter(
+          (n) =>
+            n.selected && (n.type === "sotCard" || n.type === "contextBlock"),
+        );
+        if (selected.length > 0) dragSelectionRef.current = selected;
+      }
+
       for (const change of changes) {
         if (change.type === "remove") {
           deleteNodeContent(workspace, change.id);
         }
       }
       onNodesChange(changes);
-      if (loaded) triggerDebouncedSave();
+      // Skip save for selection-only changes (fired rapidly during marquee drag)
+      const hasPersistableChange = changes.some((c) => c.type !== "select");
+      if (loaded && hasPersistableChange) triggerDebouncedSave();
     },
-    [workspace, onNodesChange, triggerDebouncedSave, loaded],
+    [workspace, nodes, onNodesChange, triggerDebouncedSave, loaded],
   );
 
   // Auto-save on edge changes
@@ -257,9 +275,47 @@ function CanvasInner({ workspace }: { workspace: string }) {
     }
   }, [nodes.length, triggerDebouncedSave, loaded]);
 
+  // Snapshot selected SOTs when a connection drag starts (before deselection)
+  const connectSelectionRef = useRef<Node[]>([]);
+  const onConnectStart = useCallback(
+    (_event: MouseEvent | TouchEvent, params: { nodeId: string | null }) => {
+      document.body.classList.add("connecting-edge");
+      connectSelectionRef.current = nodes.filter(
+        (n) =>
+          n.selected &&
+          n.id !== params.nodeId &&
+          (n.type === "sotCard" || n.type === "contextBlock"),
+      );
+    },
+    [nodes],
+  );
+
   const onConnect = useCallback(
     (connection: Connection) => {
-      setEdges((eds) => addEdge(connection, eds));
+      const selectedSots = connectSelectionRef.current;
+      connectSelectionRef.current = [];
+
+      setEdges((eds) => {
+        let next = addEdge(connection, eds);
+        for (const sot of selectedSots) {
+          if (
+            !next.some(
+              (e) => e.source === sot.id && e.target === connection.target,
+            )
+          ) {
+            next = addEdge(
+              {
+                source: sot.id,
+                target: connection.target!,
+                sourceHandle: null,
+                targetHandle: null,
+              },
+              next,
+            );
+          }
+        }
+        return next;
+      });
       if (loaded) triggerDebouncedSave();
     },
     [setEdges, triggerDebouncedSave, loaded],
@@ -376,14 +432,15 @@ function CanvasInner({ workspace }: { workspace: string }) {
     ]);
   }, [screenToFlowPosition, setNodes]);
 
-  // Capture selected SOT nodes at drag start — clicking a drag handle may
-  // deselect other nodes before onNodeDragStop fires.
-  const dragSelectionRef = useRef<Node[]>([]);
+  // Refresh the snapshot at drag start as a fallback (e.g. single-node drag
+  // without prior deselection).
   const onNodeDragStart = useCallback(
     (_event: React.MouseEvent, _node: Node, _draggedNodes: Node[]) => {
-      dragSelectionRef.current = nodes.filter(
-        (n) => n.selected && (n.type === "sotCard" || n.type === "contextBlock"),
-      );
+      if (dragSelectionRef.current.length === 0) {
+        dragSelectionRef.current = nodes.filter(
+          (n) => n.selected && (n.type === "sotCard" || n.type === "contextBlock"),
+        );
+      }
     },
     [nodes],
   );
@@ -460,7 +517,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
         onConnect={onConnect}
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
-        onConnectStart={() => document.body.classList.add("connecting-edge")}
+        onConnectStart={onConnectStart}
         onConnectEnd={() => document.body.classList.remove("connecting-edge")}
         onViewportChange={onViewportChange}
         onDragOver={handleDragOver}
