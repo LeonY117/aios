@@ -45,6 +45,16 @@ body {
   user-select: text !important;
 }
 
+/* Static selection box around selected nodes: border only, match node selection style */
+.react-flow__nodesselection-rect,
+.react-flow .react-flow__nodesselection-rect {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 2px solid #60a5fa !important;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3) !important;
+  border-radius: 8px !important;
+}
+
 /* Disable text selection while dragging an edge (class toggled via JS) */
 body.connecting-edge .react-flow__node {
   -webkit-user-select: none !important;
