@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { memo, useRef } from "react";
 
 type CanvasToolbarProps = {
   onAddText: () => void;
@@ -10,7 +10,7 @@ type CanvasToolbarProps = {
   onAddFile: (file: File) => void;
 };
 
-export default function CanvasToolbar({
+export default memo(function CanvasToolbar({
   onAddText,
   onAddLink,
   onAddChat,
@@ -135,4 +135,4 @@ export default function CanvasToolbar({
       </button>
     </div>
   );
-}
+});

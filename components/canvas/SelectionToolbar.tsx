@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import type { Node } from "@xyflow/react";
 import type { ChatNodeData } from "@/types";
 
@@ -11,7 +11,7 @@ type SelectionToolbarProps = {
   onNewChatWithContext: () => void;
 };
 
-export default function SelectionToolbar({
+export default memo(function SelectionToolbar({
   selectedCount,
   chatNodes,
   onAttachToChat,
@@ -103,4 +103,4 @@ export default function SelectionToolbar({
       )}
     </div>
   );
-}
+});

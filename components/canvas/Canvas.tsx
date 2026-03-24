@@ -61,8 +61,27 @@ type SaveStatus = "idle" | "saving" | "saved";
 
 function CanvasInner({ workspace }: { workspace: string }) {
   const router = useRouter();
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [nodes, setNodesRaw, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+  // Wrap setNodes so every node in state has dragHandle set.
+  // This lets us pass `nodes` directly to ReactFlow, preserving reference
+  // identity for unchanged nodes so React Flow can skip them with ===.
+  const setNodes: typeof setNodesRaw = useCallback(
+    (updater) => {
+      setNodesRaw((prev) => {
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        if (next.every((n) => n.dragHandle === ".custom-drag-handle"))
+          return next;
+        return next.map((n) =>
+          n.dragHandle === ".custom-drag-handle"
+            ? n
+            : { ...n, dragHandle: ".custom-drag-handle" },
+        );
+      });
+    },
+    [setNodesRaw],
+  );
   const { screenToFlowPosition, setViewport } = useReactFlow();
   const store = useStoreApi();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -583,15 +602,10 @@ function CanvasInner({ workspace }: { workspace: string }) {
     if (loaded) triggerDebouncedSave();
   }, [screenToFlowPosition, setNodes, setEdges, triggerDebouncedSave, loaded]);
 
-  const draggableNodes = useMemo(
-    () => nodes.map((n) => (n.dragHandle === ".custom-drag-handle" ? n : { ...n, dragHandle: ".custom-drag-handle" })),
-    [nodes],
-  );
-
   return (
     <>
       <ReactFlow
-        nodes={draggableNodes}
+        nodes={nodes}
         edges={edges}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
