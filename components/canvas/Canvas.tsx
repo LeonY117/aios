@@ -10,6 +10,7 @@ import {
   useNodesState,
   useEdgesState,
   useReactFlow,
+  useStoreApi,
   addEdge,
   type Node,
   type Edge,
@@ -63,6 +64,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { screenToFlowPosition, setViewport } = useReactFlow();
+  const store = useStoreApi();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [loaded, setLoaded] = useState(false);
 
@@ -78,6 +80,17 @@ function CanvasInner({ workspace }: { workspace: string }) {
   useEffect(() => {
     edgesRef.current = edges;
   }, [edges]);
+
+  // Show group selection box when 2+ nodes are selected (e.g. via Shift+click)
+  useEffect(() => {
+    const selectedCount = nodes.filter((n) => n.selected).length;
+    const { nodesSelectionActive } = store.getState();
+    if (selectedCount >= 2 && !nodesSelectionActive) {
+      store.setState({ nodesSelectionActive: true });
+    } else if (selectedCount < 2 && nodesSelectionActive) {
+      store.setState({ nodesSelectionActive: false });
+    }
+  }, [nodes, store]);
 
   useCanvasPaste(setNodes);
 
@@ -530,6 +543,8 @@ function CanvasInner({ workspace }: { workspace: string }) {
         }}
         connectionLineComponent={CenterConnectionLine}
         selectionOnDrag
+        selectionKeyCode={null}
+        multiSelectionKeyCode="Shift"
         panOnDrag={[1, 2]}
         selectionMode={SelectionMode.Partial}
         zoomOnScroll={false}
