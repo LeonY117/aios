@@ -475,6 +475,8 @@ function CanvasInner({ workspace }: { workspace: string }) {
         selectionOnDrag
         panOnDrag={[1, 2]}
         selectionMode={SelectionMode.Partial}
+        zoomOnScroll={false}
+        panOnScroll
         minZoom={0.25}
         maxZoom={2}
       >
