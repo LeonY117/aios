@@ -205,7 +205,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
         (c) => c.type === "select" && !c.selected,
       );
       if (isDeselecting) {
-        const selected = nodes.filter(
+        const selected = nodesRef.current.filter(
           (n) =>
             n.selected && (n.type === "sotCard" || n.type === "contextBlock"),
         );
@@ -222,7 +222,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
       const hasPersistableChange = changes.some((c) => c.type !== "select");
       if (loaded && hasPersistableChange) triggerDebouncedSave();
     },
-    [workspace, nodes, onNodesChange, triggerDebouncedSave, loaded],
+    [workspace, onNodesChange, triggerDebouncedSave, loaded],
   );
 
   // Auto-save on edge changes
@@ -293,14 +293,14 @@ function CanvasInner({ workspace }: { workspace: string }) {
   const onConnectStart = useCallback(
     (_event: MouseEvent | TouchEvent, params: { nodeId: string | null }) => {
       document.body.classList.add("connecting-edge");
-      connectSelectionRef.current = nodes.filter(
+      connectSelectionRef.current = nodesRef.current.filter(
         (n) =>
           n.selected &&
           n.id !== params.nodeId &&
           (n.type === "sotCard" || n.type === "contextBlock"),
       );
     },
-    [nodes],
+    [],
   );
 
   const onConnect = useCallback(
@@ -450,12 +450,12 @@ function CanvasInner({ workspace }: { workspace: string }) {
   const onNodeDragStart = useCallback(
     (_event: React.MouseEvent, _node: Node, _draggedNodes: Node[]) => {
       if (dragSelectionRef.current.length === 0) {
-        dragSelectionRef.current = nodes.filter(
+        dragSelectionRef.current = nodesRef.current.filter(
           (n) => n.selected && (n.type === "sotCard" || n.type === "contextBlock"),
         );
       }
     },
-    [nodes],
+    [],
   );
 
   // When dragged SOT nodes are dropped onto a chat, create edges for all of them
@@ -478,8 +478,8 @@ function CanvasInner({ workspace }: { workspace: string }) {
       );
 
       // Find chat nodes that overlap with any dragged SOT center
-      const chatNodes = nodes.filter((n) => n.type === "chatWindow");
-      for (const chat of chatNodes) {
+      const chats = nodesRef.current.filter((n) => n.type === "chatWindow");
+      for (const chat of chats) {
         const cw = chat.measured?.width ?? (chat.style?.width as number) ?? 380;
         const ch = chat.measured?.height ?? (chat.style?.height as number) ?? 500;
 
@@ -512,8 +512,76 @@ function CanvasInner({ workspace }: { workspace: string }) {
         }
       }
     },
-    [nodes, setEdges, triggerDebouncedSave, loaded],
+    [setEdges, triggerDebouncedSave, loaded],
   );
+
+  // Derived lists for selection toolbar
+  const selectedSots = useMemo(
+    () => nodes.filter(
+      (n) => n.selected && (n.type === "sotCard" || n.type === "contextBlock"),
+    ),
+    [nodes],
+  );
+
+  const chatNodes = useMemo(
+    () => nodes.filter((n) => n.type === "chatWindow"),
+    [nodes],
+  );
+
+  const attachToChat = useCallback(
+    (chatId: string) => {
+      const sots = nodesRef.current.filter(
+        (n) => n.selected && (n.type === "sotCard" || n.type === "contextBlock"),
+      );
+      setEdges((eds) => {
+        let next = [...eds];
+        for (const sot of sots) {
+          if (!next.some((e) => e.source === sot.id && e.target === chatId)) {
+            next = addEdge({ source: sot.id, target: chatId, sourceHandle: null, targetHandle: null }, next);
+          }
+        }
+        return next;
+      });
+      if (loaded) triggerDebouncedSave();
+    },
+    [setEdges, triggerDebouncedSave, loaded],
+  );
+
+  const newChatWithContext = useCallback(() => {
+    const chatId = crypto.randomUUID();
+    const position = viewportCenter(screenToFlowPosition);
+    const sots = nodesRef.current.filter(
+      (n) => n.selected && (n.type === "sotCard" || n.type === "contextBlock"),
+    );
+    const chatData: ChatNodeData = {
+      title: "New conversation",
+      source: "interactive",
+      messages: [],
+      webSearch: false,
+    };
+    setNodes((nds) => [
+      ...nds.map((n) => (n.selected ? { ...n, selected: false } : n)),
+      {
+        id: chatId,
+        type: "chatWindow",
+        position: { x: position.x + 200, y: position.y },
+        data: chatData,
+        style: { width: 380, height: 500 },
+        zIndex: topZIndex(nds),
+        selected: true,
+      },
+    ]);
+    setEdges((eds) => {
+      let next = [...eds];
+      for (const sot of sots) {
+        if (!next.some((e) => e.source === sot.id && e.target === chatId)) {
+          next = addEdge({ source: sot.id, target: chatId, sourceHandle: null, targetHandle: null }, next);
+        }
+      }
+      return next;
+    });
+    if (loaded) triggerDebouncedSave();
+  }, [screenToFlowPosition, setNodes, setEdges, triggerDebouncedSave, loaded]);
 
   const draggableNodes = useMemo(
     () => nodes.map((n) => (n.dragHandle === ".custom-drag-handle" ? n : { ...n, dragHandle: ".custom-drag-handle" })),
@@ -555,59 +623,14 @@ function CanvasInner({ workspace }: { workspace: string }) {
         <Background variant={BackgroundVariant.Dots} />
       </ReactFlow>
       <CanvasToolbar onAddText={addTextBlock} onAddLink={addLinkNode} onAddChat={addChatNode} onAddContextBlock={addContextBlock} onAddFile={addFileNode} />
-      {(() => {
-        const selectedSots = nodes.filter(
-          (n) => n.selected && (n.type === "sotCard" || n.type === "contextBlock"),
-        );
-        const chatNodes = nodes.filter((n) => n.type === "chatWindow");
-
-        const attachToChat = (chatId: string) => {
-          setEdges((eds) => {
-            let next = [...eds];
-            for (const sot of selectedSots) {
-              if (!next.some((e) => e.source === sot.id && e.target === chatId)) {
-                next = addEdge({ source: sot.id, target: chatId, sourceHandle: null, targetHandle: null }, next);
-              }
-            }
-            return next;
-          });
-          if (loaded) triggerDebouncedSave();
-        };
-
-        const newChatWithContext = () => {
-          const chatId = crypto.randomUUID();
-          const position = viewportCenter(screenToFlowPosition);
-          const chatData: ChatNodeData = {
-            title: "New conversation",
-            source: "interactive",
-            messages: [],
-            webSearch: false,
-          };
-          setNodes((nds) => [
-            ...nds.map((n) => (n.selected ? { ...n, selected: false } : n)),
-            {
-              id: chatId,
-              type: "chatWindow",
-              position: { x: position.x + 200, y: position.y },
-              data: chatData,
-              style: { width: 380, height: 500 },
-              zIndex: topZIndex(nds),
-              selected: true,
-            },
-          ]);
-          // Attach after creating the node
-          setTimeout(() => attachToChat(chatId), 0);
-        };
-
-        return selectedSots.length >= 2 ? (
-          <SelectionToolbar
-            selectedCount={selectedSots.length}
-            chatNodes={chatNodes}
-            onAttachToChat={attachToChat}
-            onNewChatWithContext={newChatWithContext}
-          />
-        ) : null;
-      })()}
+      {selectedSots.length >= 2 && (
+        <SelectionToolbar
+          selectedCount={selectedSots.length}
+          chatNodes={chatNodes}
+          onAttachToChat={attachToChat}
+          onNewChatWithContext={newChatWithContext}
+        />
+      )}
       <WorkspaceSidebar
         currentSession={workspace}
         onSwitch={handleSwitch}
