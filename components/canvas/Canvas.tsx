@@ -25,10 +25,11 @@ import SotCardNode from "./nodes/SotCardNode";
 import ChatNode from "./nodes/ChatNode";
 import ContextBlockNode from "./nodes/ContextBlockNode";
 import LinkInputNode from "./nodes/LinkInputNode";
+import GroupConnectorNode from "./nodes/GroupConnectorNode";
 import CenterEdge from "./edges/CenterEdge";
 import CenterConnectionLine from "./edges/CenterConnectionLine";
 import CanvasToolbar from "./CanvasToolbar";
-import SelectionToolbar from "./SelectionToolbar";
+import GroupConnectorToolbar from "./GroupConnectorToolbar";
 import WorkspaceSidebar from "@/components/WorkspaceSidebar";
 import { useCanvasPaste } from "@/lib/hooks/useCanvasPaste";
 import { handleFileUpload } from "@/lib/hooks/useFileUpload";
@@ -51,7 +52,10 @@ const nodeTypes = {
   chatWindow: ChatNode,
   contextBlock: ContextBlockNode,
   linkInput: LinkInputNode,
+  groupConnector: GroupConnectorNode,
 };
+
+const GROUP_CONNECTOR_ID = "__group_connector__";
 
 const edgeTypes = {
   center: CenterEdge,
@@ -111,13 +115,74 @@ function CanvasInner({ workspace }: { workspace: string }) {
     }
   }, [nodes, store]);
 
+  // Manage ephemeral group-connector proxy node: appears when 2+ SOTs selected,
+  // positioned at the right-center of the selection bounding box.
+  useEffect(() => {
+    const selected = nodes.filter(
+      (n) => n.selected && n.id !== GROUP_CONNECTOR_ID,
+    );
+    const selectedSotCount = selected.filter(
+      (n) => n.type === "sotCard" || n.type === "contextBlock",
+    ).length;
+
+    if (selectedSotCount >= 2) {
+      // Compute bounding box of ALL selected nodes (matches selection rect)
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const n of selected) {
+        const w = n.measured?.width ?? (n.style?.width as number) ?? 280;
+        const h = n.measured?.height ?? (n.style?.height as number) ?? 360;
+        minX = Math.min(minX, n.position.x);
+        minY = Math.min(minY, n.position.y);
+        maxX = Math.max(maxX, n.position.x + w);
+        maxY = Math.max(maxY, n.position.y + h);
+      }
+      const centerY = (minY + maxY) / 2;
+
+      setNodesRaw((nds) => {
+        const existing = nds.find((n) => n.id === GROUP_CONNECTOR_ID);
+        if (existing) {
+          // Update position if changed
+          if (existing.position.x === maxX && existing.position.y === centerY) {
+            return nds;
+          }
+          return nds.map((n) =>
+            n.id === GROUP_CONNECTOR_ID
+              ? { ...n, position: { x: maxX, y: centerY } }
+              : n,
+          );
+        }
+        // Add proxy node
+        return [
+          ...nds,
+          {
+            id: GROUP_CONNECTOR_ID,
+            type: "groupConnector",
+            position: { x: maxX, y: centerY },
+            data: {},
+            selectable: false,
+            draggable: false,
+            focusable: false,
+            zIndex: 10000,
+          },
+        ];
+      });
+    } else {
+      // Remove proxy if present
+      setNodesRaw((nds) => {
+        if (!nds.some((n) => n.id === GROUP_CONNECTOR_ID)) return nds;
+        return nds.filter((n) => n.id !== GROUP_CONNECTOR_ID);
+      });
+    }
+  }, [nodes, setNodesRaw]);
+
   useCanvasPaste(setNodes);
 
   // --- Persistence ---
 
   const doSave = useCallback((): void => {
     setSaveStatus("saving");
-    void saveSession(workspace, nodesRef.current, edgesRef.current, viewportRef.current).then(
+    const persistNodes = nodesRef.current.filter((n) => n.id !== GROUP_CONNECTOR_ID);
+    void saveSession(workspace, persistNodes, edgesRef.current, viewportRef.current).then(
       () => {
         setSaveStatus("saved");
         setTimeout(
@@ -175,7 +240,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
   const handleSwitch = useCallback(
     async (name: string) => {
       flushDebouncedSave();
-      await saveSession(workspace, nodesRef.current, edgesRef.current, viewportRef.current);
+      await saveSession(workspace, nodesRef.current.filter((n) => n.id !== GROUP_CONNECTOR_ID), edgesRef.current, viewportRef.current);
       router.push("/" + encodeURIComponent(name));
     },
     [workspace, flushDebouncedSave, router],
@@ -184,7 +249,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
   const handleCreated = useCallback(
     async (name: string) => {
       flushDebouncedSave();
-      await saveSession(workspace, nodesRef.current, edgesRef.current, viewportRef.current);
+      await saveSession(workspace, nodesRef.current.filter((n) => n.id !== GROUP_CONNECTOR_ID), edgesRef.current, viewportRef.current);
       await createSession(name);
       router.push("/" + encodeURIComponent(name));
     },
@@ -328,7 +393,10 @@ function CanvasInner({ workspace }: { workspace: string }) {
       connectSelectionRef.current = [];
 
       setEdges((eds) => {
-        let next = addEdge(connection, eds);
+        // Skip edge from the group-connector proxy — it's not a real source
+        let next = connection.source === GROUP_CONNECTOR_ID
+          ? eds
+          : addEdge(connection, eds);
         for (const sot of selectedSots) {
           if (
             !next.some(
@@ -463,6 +531,23 @@ function CanvasInner({ workspace }: { workspace: string }) {
       },
     ]);
   }, [screenToFlowPosition, setNodes]);
+
+  // Figma-like solo-select: clicking an already-selected node in a group
+  // should deselect all others. React Flow skips this case by default.
+  const onNodeClick = useCallback(
+    (_event: React.MouseEvent, clickedNode: Node) => {
+      if (
+        clickedNode.selected &&
+        !_event.shiftKey &&
+        nodesRef.current.filter((n) => n.selected).length > 1
+      ) {
+        setNodes((nds) =>
+          nds.map((n) => ({ ...n, selected: n.id === clickedNode.id })),
+        );
+      }
+    },
+    [setNodes],
+  );
 
   // Refresh the snapshot at drag start as a fallback (e.g. single-node drag
   // without prior deselection).
@@ -610,6 +695,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
+        onNodeClick={onNodeClick}
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
         onConnectStart={onConnectStart}
@@ -635,16 +721,16 @@ function CanvasInner({ workspace }: { workspace: string }) {
         maxZoom={2}
       >
         <Background variant={BackgroundVariant.Dots} />
+        {selectedSots.length >= 2 && (
+          <GroupConnectorToolbar
+            selectedSots={selectedSots}
+            chatNodes={chatNodes}
+            onAttachToChat={attachToChat}
+            onNewChatWithContext={newChatWithContext}
+          />
+        )}
       </ReactFlow>
       <CanvasToolbar onAddText={addTextBlock} onAddLink={addLinkNode} onAddChat={addChatNode} onAddContextBlock={addContextBlock} onAddFile={addFileNode} />
-      {selectedSots.length >= 2 && (
-        <SelectionToolbar
-          selectedCount={selectedSots.length}
-          chatNodes={chatNodes}
-          onAttachToChat={attachToChat}
-          onNewChatWithContext={newChatWithContext}
-        />
-      )}
       <WorkspaceSidebar
         currentSession={workspace}
         onSwitch={handleSwitch}
@@ -668,6 +754,10 @@ export default function Canvas({ workspace }: { workspace: string }) {
       <style>{`
         svg.react-flow__connectionline { z-index: -1 !important; }
         .react-flow .react-flow__edges { z-index: -1 !important; }
+        .react-flow__node[data-id="${GROUP_CONNECTOR_ID}"] .connector-handle-visual {
+          opacity: 1 !important;
+          transform: scale(1) !important;
+        }
         .react-flow__node:hover .connector-handle-visual {
           opacity: 1 !important;
           transform: scale(1) !important;
