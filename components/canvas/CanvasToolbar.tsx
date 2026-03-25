@@ -24,7 +24,7 @@ export default memo(function CanvasToolbar({
       {/* Text button */}
       <button
         onClick={onAddText}
-        title="Add text block"
+        title="Add text block (T)"
         className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
       >
         <svg
@@ -83,7 +83,7 @@ export default memo(function CanvasToolbar({
       {/* Link button */}
       <button
         onClick={onAddLink}
-        title="Add from link"
+        title="Add from link (L)"
         className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
       >
         <svg
@@ -106,7 +106,7 @@ export default memo(function CanvasToolbar({
       {/* Chat button */}
       <button
         onClick={onAddChat}
-        title="New chat"
+        title="New chat (C)"
         className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
       >
         <svg
@@ -128,7 +128,7 @@ export default memo(function CanvasToolbar({
       {/* Context block button */}
       <button
         onClick={onAddContextBlock}
-        title="Add context block"
+        title="Add context block (B)"
         className="nodrag flex items-center gap-1.5 rounded-md bg-indigo-500 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-indigo-600 transition-colors"
       >
         + Context

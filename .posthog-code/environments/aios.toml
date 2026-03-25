@@ -1,0 +1,9 @@
+id = "197368d4-b4f3-41e5-a2b6-8b35d3b6413c" # DO NOT EDIT MANUALLY
+version = 1
+
+name = "aios"
+
+[setup]
+script = '''
+npm install
+npm run dev'''

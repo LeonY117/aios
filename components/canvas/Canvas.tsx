@@ -364,42 +364,6 @@ function CanvasInner({ workspace }: { workspace: string }) {
     return () => document.removeEventListener("wheel", handler, { capture: true });
   }, []);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (!e.metaKey && !e.ctrlKey) return;
-
-      // Cmd+S — save
-      if (e.key === "s") {
-        e.preventDefault();
-        flushDebouncedSave();
-        doSave();
-        return;
-      }
-
-      // Cmd+A — select all SOT nodes (skip if input is focused)
-      if (e.key === "a") {
-        const active = document.activeElement;
-        if (
-          active instanceof HTMLInputElement ||
-          active instanceof HTMLTextAreaElement ||
-          (active instanceof HTMLElement && active.isContentEditable)
-        ) {
-          return;
-        }
-        e.preventDefault();
-        setNodes((nds) =>
-          nds.map((n) => ({
-            ...n,
-            selected: n.type === "sotCard" || n.type === "contextBlock",
-          })),
-        );
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [doSave, flushDebouncedSave, setNodes]);
-
   // Trigger save when nodes are added via paste
   const prevNodeCount = useRef(0);
   useEffect(() => {
@@ -568,6 +532,73 @@ function CanvasInner({ workspace }: { workspace: string }) {
       },
     ]);
   }, [screenToFlowPosition, setNodes]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Single-key shortcuts (no modifier) for node creation
+      if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+        const active = document.activeElement;
+        if (
+          active instanceof HTMLInputElement ||
+          active instanceof HTMLTextAreaElement ||
+          (active instanceof HTMLElement && active.isContentEditable)
+        ) {
+          // Don't intercept typing in text fields
+        } else {
+          switch (e.key.toLowerCase()) {
+            case "t":
+              e.preventDefault();
+              addTextBlock();
+              return;
+            case "l":
+              e.preventDefault();
+              addLinkNode();
+              return;
+            case "c":
+              e.preventDefault();
+              addChatNode();
+              return;
+            case "b":
+              e.preventDefault();
+              addContextBlock();
+              return;
+          }
+        }
+      }
+
+      if (!e.metaKey && !e.ctrlKey) return;
+
+      // Cmd+S — save
+      if (e.key === "s") {
+        e.preventDefault();
+        flushDebouncedSave();
+        doSave();
+        return;
+      }
+
+      // Cmd+A — select all SOT nodes (skip if input is focused)
+      if (e.key === "a") {
+        const active = document.activeElement;
+        if (
+          active instanceof HTMLInputElement ||
+          active instanceof HTMLTextAreaElement ||
+          (active instanceof HTMLElement && active.isContentEditable)
+        ) {
+          return;
+        }
+        e.preventDefault();
+        setNodes((nds) =>
+          nds.map((n) => ({
+            ...n,
+            selected: n.type === "sotCard" || n.type === "contextBlock",
+          })),
+        );
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [doSave, flushDebouncedSave, setNodes, addTextBlock, addLinkNode, addChatNode, addContextBlock]);
 
   // Figma-like solo-select: clicking an already-selected node in a group
   // should deselect all others. React Flow skips this case by default.
