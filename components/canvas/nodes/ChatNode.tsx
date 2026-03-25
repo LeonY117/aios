@@ -347,6 +347,7 @@ function Composer({
   modelId,
   webSearch,
   isStreaming,
+  selected,
   onSend,
   onStop,
   onModelChange,
@@ -355,6 +356,7 @@ function Composer({
   modelId: string;
   webSearch: boolean;
   isStreaming: boolean;
+  selected?: boolean;
   onSend: (text: string) => void;
   onStop: () => void;
   onModelChange: (id: string) => void;
@@ -413,7 +415,7 @@ function Composer({
         value={input}
         onChange={handleInput}
         onKeyDown={handleKeyDown}
-        className={`nodrag nowheel w-full resize-none rounded-t-lg border-0 bg-transparent px-3 pt-2 pb-1 text-xs placeholder-gray-400 focus:outline-none focus:ring-0 ${
+        className={`nodrag ${selected ? "nowheel" : ""} w-full resize-none rounded-t-lg border-0 bg-transparent px-3 pt-2 pb-1 text-xs placeholder-gray-400 focus:outline-none focus:ring-0 ${
           isStreaming ? "text-gray-400 cursor-not-allowed" : "text-gray-700"
         }`}
         style={{ minHeight: "28px", maxHeight: "120px" }}
@@ -907,7 +909,7 @@ function ChatNode({
 
         {/* Messages or empty state */}
         {hasMessages ? (
-          <div className="nowheel min-h-0 flex-1 overflow-y-auto p-3 cursor-text">
+          <div className={`${selected ? "nowheel" : ""} min-h-0 flex-1 overflow-y-auto p-3 cursor-text`}>
            <div className="mx-auto max-w-xl space-y-3">
             {(data.messages ?? []).map((msg, i, arr) => {
               const isLastAssistant =
@@ -967,6 +969,7 @@ function ChatNode({
             modelId={data.modelId || DEFAULT_MODEL_ID}
             webSearch={data.webSearch ?? false}
             isStreaming={data.isStreaming ?? false}
+            selected={selected}
             onSend={handleSend}
             onStop={handleStop}
             onModelChange={(modelId) => updateData({

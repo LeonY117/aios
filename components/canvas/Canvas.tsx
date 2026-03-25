@@ -339,6 +339,31 @@ function CanvasInner({ workspace }: { workspace: string }) {
     [triggerDebouncedSave, loaded],
   );
 
+  // Allow pinch / Cmd+scroll zoom even over .nowheel elements.
+  // React Flow blocks ALL wheel events inside .nowheel; we strip the class
+  // for zoom gestures so they reach the d3 zoom handler.
+  useEffect(() => {
+    const handler = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      let el = e.target as HTMLElement | null;
+      const stripped: HTMLElement[] = [];
+      while (el) {
+        if (el.classList.contains("nowheel")) {
+          el.classList.remove("nowheel");
+          stripped.push(el);
+        }
+        el = el.parentElement;
+      }
+      if (stripped.length > 0) {
+        requestAnimationFrame(() => {
+          for (const s of stripped) s.classList.add("nowheel");
+        });
+      }
+    };
+    document.addEventListener("wheel", handler, { capture: true, passive: true });
+    return () => document.removeEventListener("wheel", handler, { capture: true });
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -728,6 +753,8 @@ function CanvasInner({ workspace }: { workspace: string }) {
         panOnDrag={[1, 2]}
         selectionMode={SelectionMode.Partial}
         zoomOnScroll={false}
+        zoomOnPinch
+        zoomActivationKeyCode="Meta"
         panOnScroll
         minZoom={0.25}
         maxZoom={2}

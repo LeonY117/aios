@@ -115,7 +115,7 @@ function ContextBlockNode({
         </div>
 
         {/* Connected sources list */}
-        <div className="min-h-0 flex-1 overflow-y-auto nowheel px-4">
+        <div className={`min-h-0 flex-1 overflow-y-auto ${selected ? "nowheel" : ""} px-4`}>
          <div className="mx-auto max-w-xl">
           {sotNodes.length === 0 ? (
             <p className="text-xs text-gray-400 italic">

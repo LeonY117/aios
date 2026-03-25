@@ -35,6 +35,7 @@ type RichTextEditorProps = {
   content: string;
   onChange: (html: string) => void;
   autoFocus?: boolean;
+  selected?: boolean;
   renderActions?: () => React.ReactNode;
 };
 
@@ -44,6 +45,7 @@ export default function RichTextEditor({
   content,
   onChange,
   autoFocus = false,
+  selected = false,
   renderActions,
 }: RichTextEditorProps) {
   const onChangeRef = useRef(onChange);
@@ -68,13 +70,7 @@ export default function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "nodrag nowheel nokey prose prose-sm prose-gray max-w-none min-h-[60px] px-4 py-2 outline-none focus:outline-none leading-normal",
-      },
-      handleDOMEvents: {
-        wheel: (_view, event) => {
-          event.stopPropagation();
-          return false;
-        },
+          "nodrag nokey prose prose-sm prose-gray max-w-none min-h-[60px] px-4 py-2 outline-none focus:outline-none leading-normal",
       },
     },
   });
@@ -91,7 +87,7 @@ export default function RichTextEditor({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className={`min-h-0 flex-1 overflow-y-auto ${selected ? "nowheel" : ""}`}>
         <div className="mx-auto max-w-xl">
           <EditorContent editor={editor} />
         </div>
