@@ -4,6 +4,7 @@ import {
   getBezierPath,
   Position,
   useInternalNode,
+  useStore,
   type EdgeProps,
 } from "@xyflow/react";
 
@@ -18,7 +19,15 @@ export default function CenterEdge({
   const sourceNode = useInternalNode(source);
   const targetNode = useInternalNode(target);
 
+  // Check if any node on the canvas is selected
+  const hasSelection = useStore(
+    (s) => s.nodes.some((n) => n.selected),
+  );
+
   if (!sourceNode || !targetNode) return null;
+
+  const isConnectedToSelected =
+    sourceNode.internals.userNode.selected || targetNode.internals.userNode.selected;
 
   const sourceCenter = {
     x: sourceNode.internals.positionAbsolute.x + (sourceNode.measured.width ?? 0) / 2,
@@ -63,7 +72,11 @@ export default function CenterEdge({
         id={id}
         d={edgePath}
         fill="none"
-        className="react-flow__edge-path"
+        className={[
+          "react-flow__edge-path",
+          hasSelection ? "has-selection" : "",
+          hasSelection && isConnectedToSelected ? "connected-to-selected" : "",
+        ].join(" ")}
         stroke={style?.stroke ?? "var(--edge)"}
         strokeWidth={1.5}
         markerEnd={markerEnd}
