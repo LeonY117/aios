@@ -64,7 +64,7 @@ export default function CenterEdge({
         d={edgePath}
         fill="none"
         className="react-flow__edge-path"
-        stroke={style?.stroke ?? "var(--edge-stroke)"}
+        stroke={style?.stroke ?? "var(--edge)"}
         strokeWidth={1.5}
         markerEnd={markerEnd}
         markerStart={markerStart}

@@ -96,10 +96,10 @@ function ContextBlockNode({
           pointerEvents: isConnecting ? "all" : "none",
         }}
       />
-      <div className={`context-drop-content flex h-full flex-col rounded-lg border-2 border-dashed bg-indigo-50 dark:bg-indigo-950 shadow-sm transition-all duration-150 ${selected ? "border-blue-400 ring-2 ring-blue-400/30" : "border-indigo-300 dark:border-indigo-700 hover:border-indigo-400 dark:hover:border-indigo-600"}`}>
+      <div className={`context-drop-content flex h-full flex-col rounded-lg border-2 border-dashed bg-accent-surface shadow-sm transition-all duration-150 ${selected ? "border-selection ring-2 ring-selection/30" : "border-accent-line hover:border-accent"}`}>
         {/* Drag handle */}
         <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
-          <div className="h-[3px] w-6 rounded-full bg-indigo-200 dark:bg-indigo-800" />
+          <div className="h-[3px] w-6 rounded-full bg-accent-handle" />
         </div>
 
         {/* Header */}
@@ -107,9 +107,9 @@ function ContextBlockNode({
           <EditableTitle
             title={data.title}
             onChange={handleTitleChange}
-            className="text-sm font-semibold text-indigo-900 dark:text-indigo-100"
+            className="text-sm font-semibold text-on-accent"
           />
-          <span className="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400">
+          <span className="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-accent-surface text-accent">
             context
           </span>
         </div>
@@ -118,7 +118,7 @@ function ContextBlockNode({
         <div className={`min-h-0 flex-1 overflow-y-auto ${selected ? "nowheel" : ""} px-4`}>
          <div className="mx-auto max-w-xl">
           {sotNodes.length === 0 ? (
-            <p className="text-xs text-gray-400 dark:text-gray-500 italic">
+            <p className="text-xs text-fg-muted italic">
               Drag SOT connections here to build context
             </p>
           ) : (
@@ -128,10 +128,10 @@ function ContextBlockNode({
                 return (
                   <li
                     key={n.id}
-                    className="flex items-center gap-2 rounded bg-white dark:bg-gray-800 px-2 py-1.5 text-xs text-gray-700 dark:text-gray-300 border border-gray-100 dark:border-gray-700"
+                    className="flex items-center gap-2 rounded bg-surface px-2 py-1.5 text-xs text-fg-dim border border-line-subtle"
                   >
                     <span className="truncate flex-1">{d.title}</span>
-                    <span className="shrink-0 text-[10px] text-gray-400 dark:text-gray-500">
+                    <span className="shrink-0 text-[10px] text-fg-muted">
                       {d.sourceType}
                     </span>
                   </li>
@@ -144,14 +144,14 @@ function ContextBlockNode({
 
         {/* Footer */}
         <div className="mt-3 flex items-center justify-between px-4 pb-4">
-          <span className="text-[10px] text-gray-400 dark:text-gray-500">
+          <span className="text-[10px] text-fg-muted">
             {sotNodes.length} source{sotNodes.length !== 1 ? "s" : ""}
             {tokenCount > 0 && ` · ~${tokenCount.toLocaleString()} tokens`}
           </span>
           <button
             onClick={handleCopy}
             disabled={sotNodes.length === 0}
-            className="nodrag rounded px-3 py-1.5 text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="nodrag rounded px-3 py-1.5 text-xs font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {copied ? "Copied!" : "Copy Context"}
           </button>

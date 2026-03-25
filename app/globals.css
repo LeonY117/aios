@@ -1,44 +1,98 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-/* ─── Dark / light mode CSS variables ──────────────────────────── */
+/* ─── Theme token registration ─────────────────────────────────
+   Values are set at runtime by ThemeProvider (and a blocking
+   <script> for FOUC prevention). Tailwind generates utility
+   classes like bg-surface, text-fg, border-line, etc.          */
+
+@theme {
+  /* Surfaces */
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-overlay: var(--overlay);
+
+  /* Borders */
+  --color-line: var(--line);
+  --color-line-subtle: var(--line-subtle);
+  --color-line-hover: var(--line-hover);
+
+  /* Foreground / text */
+  --color-fg: var(--fg);
+  --color-fg-dim: var(--fg-dim);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-faint: var(--fg-faint);
+
+  /* Interactive chrome */
+  --color-handle: var(--handle);
+  --color-hover: var(--hover);
+
+  /* Primary accent */
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-surface: var(--accent-surface);
+  --color-accent-line: var(--accent-line);
+  --color-on-accent: var(--on-accent);
+  --color-accent-handle: var(--accent-handle);
+
+  /* Secondary accent */
+  --color-action: var(--action);
+  --color-action-hover: var(--action-hover);
+  --color-action-surface: var(--action-surface);
+
+  /* Selection */
+  --color-selection: var(--selection);
+
+  /* High-contrast */
+  --color-contrast: var(--contrast);
+  --color-contrast-hover: var(--contrast-hover);
+  --color-contrast-fg: var(--contrast-fg);
+
+  /* Edges */
+  --color-edge: var(--edge);
+  --color-edge-active: var(--edge-active);
+}
+
+/* ─── Derived CSS vars (for inline styles) ─────────────────── */
 
 :root {
-  color-scheme: light dark;
+  --connector-hover-bg: var(--accent-surface);
+  --connector-hover-border: var(--accent-line);
+  --connector-hover-icon: var(--accent);
 
-  /* Edge / connection lines */
-  --edge-stroke: #94a3b8;
+  --context-drop-border: var(--accent-line);
+  --context-drop-bg: var(--accent-surface);
+  --context-drop-shadow: color-mix(in srgb, var(--accent) 25%, transparent);
 
-  /* Connector handle hover */
-  --connector-hover-bg: #eef2ff;
-  --connector-hover-border: #818cf8;
-  --connector-hover-icon: #6366f1;
-
-  /* Drop-zone hover feedback */
-  --context-drop-border: #818cf8;
-  --context-drop-bg: #e0e7ff;
-  --context-drop-shadow: rgba(129, 140, 248, 0.25);
-  --chat-drop-border: #93c5fd;
-  --chat-drop-bg: #eff6ff;
-  --chat-drop-shadow: rgba(147, 197, 253, 0.3);
+  --chat-drop-border: var(--selection);
+  --chat-drop-bg: var(--action-surface);
+  --chat-drop-shadow: color-mix(in srgb, var(--selection) 30%, transparent);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --edge-stroke: #475569;
-    --connector-hover-bg: #312e81;
-    --connector-hover-border: #818cf8;
-    --connector-hover-icon: #a5b4fc;
-    --context-drop-border: #6366f1;
-    --context-drop-bg: #1e1b4b;
-    --context-drop-shadow: rgba(129, 140, 248, 0.3);
-    --chat-drop-border: #60a5fa;
-    --chat-drop-bg: #172554;
-    --chat-drop-shadow: rgba(96, 165, 250, 0.3);
-  }
+/* ─── Prose typography overrides ───────────────────────────────
+   Wire Tailwind Typography into theme tokens so prose content
+   automatically adapts to any color scheme.                    */
+
+.prose {
+  --tw-prose-body: var(--fg-dim);
+  --tw-prose-headings: var(--fg);
+  --tw-prose-bold: var(--fg);
+  --tw-prose-links: var(--accent);
+  --tw-prose-code: var(--fg);
+  --tw-prose-pre-code: var(--fg-dim);
+  --tw-prose-pre-bg: var(--surface-alt);
+  --tw-prose-quotes: var(--fg-dim);
+  --tw-prose-quote-borders: var(--line);
+  --tw-prose-counters: var(--fg-muted);
+  --tw-prose-bullets: var(--fg-muted);
+  --tw-prose-hr: var(--line);
+  --tw-prose-th-borders: var(--line);
+  --tw-prose-td-borders: var(--line-subtle);
+  --tw-prose-captions: var(--fg-muted);
 }
 
-/* ─── Animations ───────────────────────────────────────────────── */
+/* ─── Animations ───────────────────────────────────────────── */
 
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -49,7 +103,7 @@
   animation: fadeIn 0.3s ease-out;
 }
 
-/* ─── React Flow overrides ─────────────────────────────────────── */
+/* ─── React Flow overrides ─────────────────────────────────── */
 
 /* Edge hover pulse & selection */
 .react-flow__edge .react-flow__edge-path {
@@ -58,23 +112,13 @@
 
 .react-flow__edge:hover .react-flow__edge-path {
   stroke-width: 3.5;
-  stroke: #6366f1;
+  stroke: var(--edge-active);
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
   stroke-width: 3;
-  stroke: #6366f1;
+  stroke: var(--edge-active);
 }
-
-@media (prefers-color-scheme: dark) {
-  .react-flow__edge:hover .react-flow__edge-path {
-    stroke: #818cf8;
-  }
-  .react-flow__edge.selected .react-flow__edge-path {
-    stroke: #818cf8;
-  }
-}
-
 
 html,
 body {
@@ -99,18 +143,16 @@ body {
   user-select: text !important;
 }
 
-/* Static selection box around selected nodes: border only, match node selection style */
+/* Static selection box around selected nodes */
 .react-flow__nodesselection-rect,
 .react-flow .react-flow__nodesselection-rect {
   background: transparent !important;
   background-color: transparent !important;
-  border: 2px solid #60a5fa !important;
-  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3) !important;
+  border: 2px solid var(--selection) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--selection) 30%, transparent) !important;
   border-radius: 8px !important;
 }
 
-/* Selection box: border renders above nodes, but non-interactive so clicks
-   pass through to the pane (deselect) or individual nodes (solo-select). */
 .react-flow__nodesselection {
   z-index: 10001 !important;
   pointer-events: none !important;
@@ -120,10 +162,7 @@ body {
   cursor: default !important;
 }
 
-/* Hide per-node connector handles when group selection is active
-   (the group toolbar provides a single handle for the whole selection).
-   The :has() selector scopes this to when the nodesselection element exists (2+ selected).
-   Also suppress the hover reveal so handles stay hidden during group selection. */
+/* Hide per-node connector handles when group selection is active */
 .react-flow:has(.react-flow__nodesselection) .react-flow__node.selected .connector-handle-visual,
 .react-flow:has(.react-flow__nodesselection) .react-flow__node.selected:hover .connector-handle-visual {
   opacity: 0 !important;
@@ -138,20 +177,14 @@ body.connecting-edge .react-flow__node {
   user-select: none !important;
 }
 
-/* ─── Tiptap editor styles ─────────────────────────────────────── */
+/* ─── Tiptap editor styles ─────────────────────────────────── */
 
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
-  color: #9ca3af;
+  color: var(--fg-muted);
   pointer-events: none;
   height: 0;
-}
-
-@media (prefers-color-scheme: dark) {
-  .tiptap p.is-editor-empty:first-child::before {
-    color: #6b7280;
-  }
 }
 
 .tiptap:focus {
@@ -198,7 +231,7 @@ body.connecting-edge .react-flow__node {
 
 .tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
   cursor: pointer;
-  accent-color: #6366f1;
+  accent-color: var(--accent);
 }
 
 .tiptap ul[data-type="taskList"] li > div {
@@ -207,13 +240,7 @@ body.connecting-edge .react-flow__node {
 
 .tiptap ul[data-type="taskList"] li[data-checked="true"] > div > p {
   text-decoration: line-through;
-  color: #9ca3af;
-}
-
-@media (prefers-color-scheme: dark) {
-  .tiptap ul[data-type="taskList"] li[data-checked="true"] > div > p {
-    color: #6b7280;
-  }
+  color: var(--fg-muted);
 }
 
 /* Normalize prose spacing on lists so they align with normal text */
@@ -243,7 +270,7 @@ body.connecting-edge .react-flow__node {
   line-height: inherit !important;
 }
 
-/* Blockquote — left line only, no quotation marks, same size as normal text */
+/* Blockquote */
 .tiptap blockquote {
   quotes: none !important;
   font-size: inherit !important;

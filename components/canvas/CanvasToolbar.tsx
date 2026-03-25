@@ -20,12 +20,12 @@ export default memo(function CanvasToolbar({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-1 py-1 shadow-lg">
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 rounded-lg border border-line bg-surface px-1 py-1 shadow-lg">
       {/* Text button */}
       <button
         onClick={onAddText}
         title="Add text block"
-        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-fg-dim hover:bg-hover hover:text-fg transition-colors"
       >
         <svg
           width="18"
@@ -43,13 +43,13 @@ export default memo(function CanvasToolbar({
         </svg>
       </button>
 
-      <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
+      <div className="h-5 w-px bg-handle" />
 
       {/* Upload button */}
       <button
         onClick={() => fileInputRef.current?.click()}
         title="Upload file (txt, md, pdf)"
-        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-fg-dim hover:bg-hover hover:text-fg transition-colors"
       >
         <svg
           width="18"
@@ -78,13 +78,13 @@ export default memo(function CanvasToolbar({
         }}
       />
 
-      <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
+      <div className="h-5 w-px bg-handle" />
 
       {/* Link button */}
       <button
         onClick={onAddLink}
         title="Add from link"
-        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-fg-dim hover:bg-hover hover:text-fg transition-colors"
       >
         <svg
           width="18"
@@ -101,13 +101,13 @@ export default memo(function CanvasToolbar({
         </svg>
       </button>
 
-      <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
+      <div className="h-5 w-px bg-handle" />
 
       {/* Chat button */}
       <button
         onClick={onAddChat}
         title="New chat"
-        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-fg-dim hover:bg-hover hover:text-fg transition-colors"
       >
         <svg
           width="18"
@@ -123,13 +123,13 @@ export default memo(function CanvasToolbar({
         </svg>
       </button>
 
-      <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
+      <div className="h-5 w-px bg-handle" />
 
       {/* Context block button */}
       <button
         onClick={onAddContextBlock}
         title="Add context block"
-        className="nodrag flex items-center gap-1.5 rounded-md bg-indigo-500 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-indigo-600 transition-colors"
+        className="nodrag flex items-center gap-1.5 rounded-md bg-accent px-2.5 py-1.5 text-sm font-medium text-white hover:bg-accent-hover transition-colors"
       >
         + Context
       </button>

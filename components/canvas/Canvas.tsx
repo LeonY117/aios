@@ -35,6 +35,7 @@ import WorkspaceSidebar from "@/components/WorkspaceSidebar";
 import { useCanvasPaste } from "@/lib/hooks/useCanvasPaste";
 import { handleFileUpload } from "@/lib/hooks/useFileUpload";
 import { viewportCenter, topZIndex } from "@/lib/nodes";
+import { useTheme } from "@/lib/themes";
 import { useRouter } from "next/navigation";
 import {
   loadSession,
@@ -65,6 +66,7 @@ const edgeTypes = {
 type SaveStatus = "idle" | "saving" | "saved";
 
 function CanvasInner({ workspace }: { workspace: string }) {
+  const { theme } = useTheme();
   const router = useRouter();
   const [nodes, setNodesRaw, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -739,10 +741,10 @@ function CanvasInner({ workspace }: { workspace: string }) {
         onDrop={handleDrop}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        colorMode="system"
+        colorMode={theme.type}
         defaultEdgeOptions={{
           type: "center",
-          style: { stroke: "var(--edge-stroke)" },
+          style: { stroke: "var(--edge)" },
         }}
         connectionLineComponent={CenterConnectionLine}
         selectionOnDrag
@@ -776,7 +778,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
         onRenamed={handleRenamed}
       />
       {saveStatus !== "idle" && (
-        <div className="absolute bottom-6 left-6 text-xs text-slate-400 dark:text-slate-500 select-none">
+        <div className="absolute bottom-6 left-6 text-xs text-fg-muted select-none">
           {saveStatus === "saving" ? "Saving..." : "Saved"}
         </div>
       )}

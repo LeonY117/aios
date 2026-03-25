@@ -43,7 +43,7 @@ export default function CenterConnectionLine({
     <path
       d={path}
       fill="none"
-      stroke="var(--edge-stroke)"
+      stroke="var(--edge)"
       strokeWidth={1.5}
       className="animated"
     />
