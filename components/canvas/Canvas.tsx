@@ -10,6 +10,7 @@ import {
   useNodesState,
   useEdgesState,
   useReactFlow,
+  useStore,
   useStoreApi,
   addEdge,
   type Node,
@@ -115,9 +116,20 @@ function CanvasInner({ workspace }: { workspace: string }) {
     }
   }, [nodes, store]);
 
-  // Manage ephemeral group-connector proxy node: appears when 2+ SOTs selected,
-  // positioned at the right-center of the selection bounding box.
+  // Manage ephemeral group-connector proxy node: appears when 2+ SOTs selected
+  // AND marquee selection is complete (not while still dragging to select).
+  const userSelectionActive = useStore((s) => s.userSelectionActive);
+
   useEffect(() => {
+    // Don't show handle while user is still drawing the selection rectangle
+    if (userSelectionActive) {
+      setNodesRaw((nds) => {
+        if (!nds.some((n) => n.id === GROUP_CONNECTOR_ID)) return nds;
+        return nds.filter((n) => n.id !== GROUP_CONNECTOR_ID);
+      });
+      return;
+    }
+
     const selected = nodes.filter(
       (n) => n.selected && n.id !== GROUP_CONNECTOR_ID,
     );
@@ -173,7 +185,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
         return nds.filter((n) => n.id !== GROUP_CONNECTOR_ID);
       });
     }
-  }, [nodes, setNodesRaw]);
+  }, [nodes, setNodesRaw, userSelectionActive]);
 
   useCanvasPaste(setNodes);
 

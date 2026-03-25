@@ -55,10 +55,10 @@ body {
   border-radius: 8px !important;
 }
 
-/* Selection box: purely visual — behind nodes, non-interactive so clicks
+/* Selection box: border renders above nodes, but non-interactive so clicks
    pass through to the pane (deselect) or individual nodes (solo-select). */
 .react-flow__nodesselection {
-  z-index: -1 !important;
+  z-index: 10001 !important;
   pointer-events: none !important;
 }
 .react-flow__nodesselection-rect {
