@@ -94,6 +94,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [loaded, setLoaded] = useState(false);
   const [isSpaceHeld, setIsSpaceHeld] = useState(false);
+  const isSpaceHeldRef = useRef(false);
 
   const viewportRef = useRef<Viewport>({ x: 0, y: 0, zoom: 1 });
   const nodesRef = useRef<Node[]>([]);
@@ -381,6 +382,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
           return;
         e.preventDefault();
         setIsSpaceHeld(true);
+        isSpaceHeldRef.current = true;
         document.body.classList.add("space-held");
       }
       if (e.key === "Shift") {
@@ -390,6 +392,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.code === "Space") {
         setIsSpaceHeld(false);
+        isSpaceHeldRef.current = false;
         document.body.classList.remove("space-held", "space-dragging");
       }
       if (e.key === "Shift") {
@@ -398,6 +401,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
     };
     const onBlur = () => {
       setIsSpaceHeld(false);
+      isSpaceHeldRef.current = false;
       document.body.classList.remove("space-held", "space-dragging", "shift-held");
     };
     window.addEventListener("keydown", onKeyDown);
@@ -413,13 +417,14 @@ function CanvasInner({ workspace }: { workspace: string }) {
 
   // Track mouse down/up while space is held for grabbing cursor
   const onMoveStart = useCallback(() => {
-    if (document.body.classList.contains("space-held")) {
+    if (isSpaceHeldRef.current) {
       document.body.classList.add("space-dragging");
     }
   }, []);
   const onMoveEnd = useCallback(() => {
     document.body.classList.remove("space-dragging");
   }, []);
+
   // Trigger save when nodes are added via paste
   const prevNodeCount = useRef(0);
   useEffect(() => {
