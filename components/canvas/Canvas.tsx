@@ -93,6 +93,8 @@ function CanvasInner({ workspace }: { workspace: string }) {
   const store = useStoreApi();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [loaded, setLoaded] = useState(false);
+  const [isSpaceHeld, setIsSpaceHeld] = useState(false);
+  const isSpaceHeldRef = useRef(false);
 
   const viewportRef = useRef<Viewport>({ x: 0, y: 0, zoom: 1 });
   const nodesRef = useRef<Node[]>([]);
@@ -364,6 +366,63 @@ function CanvasInner({ workspace }: { workspace: string }) {
     };
     document.addEventListener("wheel", handler, { capture: true, passive: true });
     return () => document.removeEventListener("wheel", handler, { capture: true });
+  }, []);
+
+  // Space key → enable left-click pan with grab cursor
+  // Shift key → suppress text selection during multi-select
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !e.repeat) {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          (e.target as HTMLElement)?.isContentEditable
+        )
+          return;
+        e.preventDefault();
+        setIsSpaceHeld(true);
+        isSpaceHeldRef.current = true;
+        document.body.classList.add("space-held");
+      }
+      if (e.key === "Shift") {
+        document.body.classList.add("shift-held");
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        setIsSpaceHeld(false);
+        isSpaceHeldRef.current = false;
+        document.body.classList.remove("space-held", "space-dragging");
+      }
+      if (e.key === "Shift") {
+        document.body.classList.remove("shift-held");
+      }
+    };
+    const onBlur = () => {
+      setIsSpaceHeld(false);
+      isSpaceHeldRef.current = false;
+      document.body.classList.remove("space-held", "space-dragging", "shift-held");
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+      document.body.classList.remove("space-held", "space-dragging", "shift-held");
+    };
+  }, []);
+
+  // Track mouse down/up while space is held for grabbing cursor
+  const onMoveStart = useCallback(() => {
+    if (isSpaceHeldRef.current) {
+      document.body.classList.add("space-dragging");
+    }
+  }, []);
+  const onMoveEnd = useCallback(() => {
+    document.body.classList.remove("space-dragging");
   }, []);
 
   // Trigger save when nodes are added via paste
@@ -767,6 +826,8 @@ function CanvasInner({ workspace }: { workspace: string }) {
         onNodeDragStop={onNodeDragStop}
         onConnectStart={onConnectStart}
         onConnectEnd={() => document.body.classList.remove("connecting-edge")}
+        onMoveStart={onMoveStart}
+        onMoveEnd={onMoveEnd}
         onViewportChange={onViewportChange}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
@@ -778,10 +839,10 @@ function CanvasInner({ workspace }: { workspace: string }) {
           style: { stroke: "var(--edge)" },
         }}
         connectionLineComponent={CenterConnectionLine}
-        selectionOnDrag
+        selectionOnDrag={!isSpaceHeld}
         selectionKeyCode={null}
         multiSelectionKeyCode="Shift"
-        panOnDrag={[1, 2]}
+        panOnDrag={isSpaceHeld ? [0, 1, 2] : [1, 2]}
         selectionMode={SelectionMode.Partial}
         zoomOnScroll={false}
         zoomOnPinch

@@ -177,6 +177,27 @@ body.connecting-edge .react-flow__node {
   user-select: none !important;
 }
 
+/* Space+drag pan: grab cursor when space held, grabbing while dragging */
+body.space-held .react-flow__pane,
+body.space-held .react-flow__pane.draggable {
+  cursor: grab !important;
+}
+body.space-dragging .react-flow__pane,
+body.space-dragging .react-flow__pane.draggable {
+  cursor: grabbing !important;
+}
+
+/* Prevent text selection across nodes when shift-clicking to multi-select.
+   contenteditable (.tiptap) ignores parent user-select, so target it directly. */
+body.shift-held .react-flow__node,
+body.shift-held .react-flow__node.selectable,
+body.shift-held .react-flow__node.draggable,
+body.shift-held .tiptap {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  user-select: none !important;
+}
+
 /* ─── Tiptap editor styles ─────────────────────────────────── */
 
 .tiptap p.is-editor-empty:first-child::before {
