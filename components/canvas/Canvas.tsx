@@ -669,6 +669,26 @@ function CanvasInner({ workspace }: { workspace: string }) {
     [nodes],
   );
 
+  const chatColorMap = useMemo(() => {
+    const COLORS = [
+      "#6366f1", "#f59e0b", "#10b981", "#ef4444",
+      "#8b5cf6", "#ec4899", "#14b8a6", "#f97316",
+    ];
+    const map = new Map<string, string>();
+    chatNodes.forEach((node, i) => {
+      map.set(node.id, COLORS[i % COLORS.length]);
+    });
+    return map;
+  }, [chatNodes]);
+
+  const coloredEdges = useMemo(() => {
+    return edges.map((edge) => {
+      const color = chatColorMap.get(edge.target) ?? chatColorMap.get(edge.source);
+      if (!color) return edge;
+      return { ...edge, style: { ...edge.style, stroke: color } };
+    });
+  }, [edges, chatColorMap]);
+
   const attachToChat = useCallback(
     (chatId: string) => {
       const sots = nodesRef.current.filter(
@@ -728,7 +748,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
     <>
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={coloredEdges}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
