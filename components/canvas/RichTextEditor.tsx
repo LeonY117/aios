@@ -8,6 +8,7 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import { InputRule } from "@tiptap/core";
 import { useEffect, useRef } from "react";
+import { clearPendingEditorFocus } from "@/lib/editor-focus-signal";
 
 // Extend TaskItem to also trigger on bare "[]" (not just "[ ]")
 const CustomTaskItem = TaskItem.extend({
@@ -34,6 +35,7 @@ type RichTextEditorProps = {
   content: string;
   onChange: (html: string) => void;
   autoFocus?: boolean;
+  selected?: boolean;
   renderActions?: () => React.ReactNode;
 };
 
@@ -43,6 +45,7 @@ export default function RichTextEditor({
   content,
   onChange,
   autoFocus = false,
+  selected = false,
   renderActions,
 }: RichTextEditorProps) {
   const onChangeRef = useRef(onChange);
@@ -67,22 +70,24 @@ export default function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "nodrag nowheel nokey prose prose-sm prose-gray max-w-none min-h-[60px] px-4 py-2 outline-none focus:outline-none leading-normal",
-      },
-      handleDOMEvents: {
-        wheel: (_view, event) => {
-          event.stopPropagation();
-          return false;
-        },
+          "nodrag nokey prose prose-sm prose-gray max-w-none min-h-[60px] px-4 py-2 outline-none focus:outline-none leading-normal",
       },
     },
   });
+
+  // Safety net: ensure focus when autoFocus is set (Tiptap's autofocus can be unreliable with async React Flow rendering)
+  useEffect(() => {
+    if (autoFocus && editor) {
+      editor.commands.focus("end");
+      clearPendingEditorFocus();
+    }
+  }, [autoFocus, editor]);
 
   if (!editor) return null;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className={`min-h-0 flex-1 overflow-y-auto ${selected ? "nowheel" : ""}`}>
         <div className="mx-auto max-w-xl">
           <EditorContent editor={editor} />
         </div>

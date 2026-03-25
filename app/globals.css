@@ -33,8 +33,12 @@ body {
   height: 100%;
 }
 
-/* Override React Flow's default node cursor & selection so body text is selectable.
+/* Override React Flow's default cursors so the canvas feels like a normal UI.
    Only the .custom-drag-handle keeps grab cursor. */
+.react-flow__pane,
+.react-flow__pane.draggable {
+  cursor: default !important;
+}
 .react-flow__node,
 .react-flow__node.selectable,
 .react-flow__node.draggable,
@@ -43,6 +47,38 @@ body {
   -webkit-user-select: text !important;
   -moz-user-select: text !important;
   user-select: text !important;
+}
+
+/* Static selection box around selected nodes: border only, match node selection style */
+.react-flow__nodesselection-rect,
+.react-flow .react-flow__nodesselection-rect {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 2px solid #60a5fa !important;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3) !important;
+  border-radius: 8px !important;
+}
+
+/* Selection box: border renders above nodes, but non-interactive so clicks
+   pass through to the pane (deselect) or individual nodes (solo-select). */
+.react-flow__nodesselection {
+  z-index: 10001 !important;
+  pointer-events: none !important;
+}
+.react-flow__nodesselection-rect {
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+/* Hide per-node connector handles when group selection is active
+   (the group toolbar provides a single handle for the whole selection).
+   The :has() selector scopes this to when the nodesselection element exists (2+ selected).
+   Also suppress the hover reveal so handles stay hidden during group selection. */
+.react-flow:has(.react-flow__nodesselection) .react-flow__node.selected .connector-handle-visual,
+.react-flow:has(.react-flow__nodesselection) .react-flow__node.selected:hover .connector-handle-visual {
+  opacity: 0 !important;
+  transform: scale(0.9) !important;
+  pointer-events: none !important;
 }
 
 /* Disable text selection while dragging an edge (class toggled via JS) */
