@@ -33,8 +33,12 @@ body {
   height: 100%;
 }
 
-/* Override React Flow's default node cursor & selection so body text is selectable.
+/* Override React Flow's default cursors so the canvas feels like a normal UI.
    Only the .custom-drag-handle keeps grab cursor. */
+.react-flow__pane,
+.react-flow__pane.draggable {
+  cursor: default !important;
+}
 .react-flow__node,
 .react-flow__node.selectable,
 .react-flow__node.draggable,
