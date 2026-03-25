@@ -36,9 +36,9 @@ function LinkInputNode({
         lineClassName="!border-transparent !border-[3px]"
         handleClassName="!w-3 !h-3 !bg-transparent !border-0"
       />
-      <div className={`flex h-full flex-col rounded-lg border bg-white shadow-sm transition-all duration-150 ${selected ? "border-blue-400 ring-2 ring-blue-400/30" : "border-gray-200 hover:border-gray-300"}`}>
+      <div className={`flex h-full flex-col rounded-lg border bg-white dark:bg-gray-800 shadow-sm transition-all duration-150 ${selected ? "border-blue-400 ring-2 ring-blue-400/30" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}>
         <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
-          <div className="h-[3px] w-6 rounded-full bg-gray-200" />
+          <div className="h-[3px] w-6 rounded-full bg-gray-200 dark:bg-gray-600" />
         </div>
         <div className="flex flex-1 flex-col px-4 pb-4">
         <div className="mb-3 flex items-center gap-2">
@@ -51,17 +51,17 @@ function LinkInputNode({
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="shrink-0 text-gray-400"
+            className="shrink-0 text-gray-400 dark:text-gray-500"
           >
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
           </svg>
-          <span className="text-sm font-semibold text-gray-900">
+          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             Add from Link
           </span>
         </div>
 
-        <p className="mb-3 text-xs text-gray-400">
+        <p className="mb-3 text-xs text-gray-400 dark:text-gray-500">
           Paste a link (Notion, GitHub, Slack, ChatGPT, Claude, or any URL)
         </p>
 
@@ -78,7 +78,7 @@ function LinkInputNode({
             }}
             placeholder="https://..."
             autoFocus
-            className="nodrag flex-1 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+            className="nodrag flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-transparent text-gray-900 dark:text-gray-100 px-2.5 py-1.5 text-sm outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500"
           />
           <button
             onClick={handleSubmit}

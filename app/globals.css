@@ -1,6 +1,45 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* ─── Dark / light mode CSS variables ──────────────────────────── */
+
+:root {
+  color-scheme: light dark;
+
+  /* Edge / connection lines */
+  --edge-stroke: #94a3b8;
+
+  /* Connector handle hover */
+  --connector-hover-bg: #eef2ff;
+  --connector-hover-border: #818cf8;
+  --connector-hover-icon: #6366f1;
+
+  /* Drop-zone hover feedback */
+  --context-drop-border: #818cf8;
+  --context-drop-bg: #e0e7ff;
+  --context-drop-shadow: rgba(129, 140, 248, 0.25);
+  --chat-drop-border: #93c5fd;
+  --chat-drop-bg: #eff6ff;
+  --chat-drop-shadow: rgba(147, 197, 253, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --edge-stroke: #475569;
+    --connector-hover-bg: #312e81;
+    --connector-hover-border: #818cf8;
+    --connector-hover-icon: #a5b4fc;
+    --context-drop-border: #6366f1;
+    --context-drop-bg: #1e1b4b;
+    --context-drop-shadow: rgba(129, 140, 248, 0.3);
+    --chat-drop-border: #60a5fa;
+    --chat-drop-bg: #172554;
+    --chat-drop-shadow: rgba(96, 165, 250, 0.3);
+  }
+}
+
+/* ─── Animations ───────────────────────────────────────────────── */
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -9,6 +48,8 @@
 .streaming-prose > *:last-child {
   animation: fadeIn 0.3s ease-out;
 }
+
+/* ─── React Flow overrides ─────────────────────────────────────── */
 
 /* Edge hover pulse & selection */
 .react-flow__edge .react-flow__edge-path {
@@ -23,6 +64,15 @@
 .react-flow__edge.selected .react-flow__edge-path {
   stroke-width: 3;
   stroke: #6366f1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .react-flow__edge:hover .react-flow__edge-path {
+    stroke: #818cf8;
+  }
+  .react-flow__edge.selected .react-flow__edge-path {
+    stroke: #818cf8;
+  }
 }
 
 
@@ -88,13 +138,20 @@ body.connecting-edge .react-flow__node {
   user-select: none !important;
 }
 
-/* Tiptap editor styles */
+/* ─── Tiptap editor styles ─────────────────────────────────────── */
+
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
   color: #9ca3af;
   pointer-events: none;
   height: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tiptap p.is-editor-empty:first-child::before {
+    color: #6b7280;
+  }
 }
 
 .tiptap:focus {
@@ -151,6 +208,12 @@ body.connecting-edge .react-flow__node {
 .tiptap ul[data-type="taskList"] li[data-checked="true"] > div > p {
   text-decoration: line-through;
   color: #9ca3af;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tiptap ul[data-type="taskList"] li[data-checked="true"] > div > p {
+    color: #6b7280;
+  }
 }
 
 /* Normalize prose spacing on lists so they align with normal text */

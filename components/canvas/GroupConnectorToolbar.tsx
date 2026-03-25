@@ -115,7 +115,6 @@ export default memo(function GroupConnectorToolbar({
   const hasChats = interactiveChats.length > 0;
 
   const invZoom = Math.min(1 / bounds.zoom, 3);
-  const toolbarX = bounds.x + bounds.width / 2;
   const gapFlow = (TOOLBAR_GAP_PX + SELECTION_RECT_PADDING_PX) / bounds.zoom;
   const toolbarY = bounds.y + bounds.height + gapFlow;
 
@@ -123,7 +122,6 @@ export default memo(function GroupConnectorToolbar({
   return (
     <ViewportPortal>
       {/* Toolbar below the group selection box */}
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div
         className="nopan nodrag nowheel"
         onPointerDown={(e) => e.stopPropagation()}
@@ -146,14 +144,14 @@ export default memo(function GroupConnectorToolbar({
             transformOrigin: "top center",
             pointerEvents: "all",
           }}
-          className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-1.5 shadow-lg whitespace-nowrap"
+          className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 shadow-lg whitespace-nowrap"
         >
-          <span className="text-xs text-gray-500 font-medium">
+          <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
             {selectedSots.length} source
             {selectedSots.length !== 1 ? "s" : ""}
           </span>
 
-          <div className="h-4 w-px bg-gray-200" />
+          <div className="h-4 w-px bg-gray-200 dark:bg-gray-700" />
 
           {/* Add-to-chat button / dropdown */}
           {hasChats ? (
@@ -178,13 +176,13 @@ export default memo(function GroupConnectorToolbar({
               </button>
 
               {dropdownOpen && (
-                <div className="absolute bottom-full left-0 mb-1 min-w-[180px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg z-[10001]">
+                <div className="absolute bottom-full left-0 mb-1 min-w-[180px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg z-[10001]">
                   <button
                     onClick={() => {
                       onNewChatWithContext();
                       setDropdownOpen(false);
                     }}
-                    className="block w-full px-3 py-1.5 text-left text-xs font-medium text-blue-600 hover:bg-blue-50 border-b border-gray-100"
+                    className="block w-full px-3 py-1.5 text-left text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/50 border-b border-gray-100 dark:border-gray-700"
                   >
                     + New chat
                   </button>
@@ -195,7 +193,7 @@ export default memo(function GroupConnectorToolbar({
                         onAttachToChat(chat.id);
                         setDropdownOpen(false);
                       }}
-                      className="block w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100 truncate"
+                      className="block w-full px-3 py-1.5 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 truncate"
                     >
                       {(chat.data as ChatNodeData).title || "Untitled chat"}
                     </button>

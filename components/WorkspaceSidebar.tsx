@@ -97,7 +97,7 @@ export default function WorkspaceSidebar({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="absolute top-3 left-3 z-50 flex h-8 w-8 items-center justify-center rounded-md bg-white/80 text-slate-500 shadow-sm border border-slate-200 hover:bg-white hover:text-slate-700 transition-colors"
+        className="absolute top-3 left-3 z-50 flex h-8 w-8 items-center justify-center rounded-md bg-white/80 dark:bg-gray-800/80 text-slate-500 dark:text-slate-400 shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-gray-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
         title="Open workspaces (Cmd+B)"
       >
         <svg
@@ -117,15 +117,15 @@ export default function WorkspaceSidebar({
 
   return (
     <>
-      <div className="absolute top-0 left-0 z-50 flex h-full w-52 flex-col border-r border-slate-200 bg-white/95 backdrop-blur-sm shadow-lg">
+      <div className="absolute top-0 left-0 z-50 flex h-full w-52 flex-col border-r border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm shadow-lg">
         {/* Header */}
-        <div className="flex items-center justify-between px-3 py-3 border-b border-slate-100">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <div className="flex items-center justify-between px-3 py-3 border-b border-slate-100 dark:border-slate-700">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             Workspaces
           </span>
           <button
             onClick={() => setOpen(false)}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
+            className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             title="Close (Cmd+B)"
           >
             <svg
@@ -149,8 +149,8 @@ export default function WorkspaceSidebar({
               key={name}
               className={`group flex items-center gap-1 px-3 py-1.5 cursor-pointer text-sm transition-colors ${
                 name === currentSession
-                  ? "bg-indigo-50 text-indigo-700 font-medium"
-                  : "text-slate-600 hover:bg-slate-50"
+                  ? "bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-medium"
+                  : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
               }`}
             >
               {renamingSession === name ? (
@@ -163,7 +163,7 @@ export default function WorkspaceSidebar({
                     if (e.key === "Escape") setRenamingSession(null);
                   }}
                   onBlur={() => handleRename(name)}
-                  className="flex-1 min-w-0 rounded border border-indigo-300 px-1.5 py-0.5 text-sm text-slate-700 outline-none focus:ring-1 focus:ring-indigo-400"
+                  className="flex-1 min-w-0 rounded border border-indigo-300 dark:border-indigo-600 bg-transparent px-1.5 py-0.5 text-sm text-slate-700 dark:text-slate-200 outline-none focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500"
                 />
               ) : (
                 <>
@@ -182,7 +182,7 @@ export default function WorkspaceSidebar({
                         setRenamingSession(name);
                         setRenameValue(name);
                       }}
-                      className="rounded p-0.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                      className="rounded p-0.5 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
                       title="Rename"
                     >
                       <svg
@@ -204,7 +204,7 @@ export default function WorkspaceSidebar({
                           e.stopPropagation();
                           handleDelete(name);
                         }}
-                        className="rounded p-0.5 text-slate-400 hover:text-red-500 hover:bg-red-50"
+                        className="rounded p-0.5 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950"
                         title="Delete"
                       >
                         <svg
@@ -229,10 +229,10 @@ export default function WorkspaceSidebar({
         </div>
 
         {/* New workspace button */}
-        <div className="border-t border-slate-100 px-3 py-2">
+        <div className="border-t border-slate-100 dark:border-slate-700 px-3 py-2">
           <button
             onClick={() => setShowNewDialog(true)}
-            className="w-full rounded-md px-2 py-1.5 text-left text-sm text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
+            className="w-full rounded-md px-2 py-1.5 text-left text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
           >
             + New workspace
           </button>
@@ -241,18 +241,18 @@ export default function WorkspaceSidebar({
 
       {/* Delete confirmation dialog */}
       {deletingSession && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20">
-          <div className="w-80 rounded-xl bg-white p-5 shadow-2xl border border-slate-200">
-            <h3 className="text-sm font-semibold text-slate-700 mb-2">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20 dark:bg-black/50">
+          <div className="w-80 rounded-xl bg-white dark:bg-gray-800 p-5 shadow-2xl border border-slate-200 dark:border-slate-700">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
               Delete Workspace
             </h3>
-            <p className="text-sm text-slate-500 mb-4">
-              Are you sure you want to delete <span className="font-medium text-slate-700">{deletingSession}</span>? This action cannot be undone.
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              Are you sure you want to delete <span className="font-medium text-slate-700 dark:text-slate-200">{deletingSession}</span>? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setDeletingSession(null)}
-                className="rounded-lg px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 transition-colors"
+                className="rounded-lg px-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
                 Cancel
               </button>
@@ -269,9 +269,9 @@ export default function WorkspaceSidebar({
 
       {/* New workspace dialog */}
       {showNewDialog && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20">
-          <div className="w-80 rounded-xl bg-white p-5 shadow-2xl border border-slate-200">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20 dark:bg-black/50">
+          <div className="w-80 rounded-xl bg-white dark:bg-gray-800 p-5 shadow-2xl border border-slate-200 dark:border-slate-700">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
               New Workspace
             </h3>
             <input
@@ -286,7 +286,7 @@ export default function WorkspaceSidebar({
                 }
               }}
               placeholder="Workspace name"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent px-3 py-2 text-sm text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500"
             />
             <div className="mt-4 flex justify-end gap-2">
               <button
@@ -294,7 +294,7 @@ export default function WorkspaceSidebar({
                   setShowNewDialog(false);
                   setNewName("");
                 }}
-                className="rounded-lg px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 transition-colors"
+                className="rounded-lg px-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
                 Cancel
               </button>

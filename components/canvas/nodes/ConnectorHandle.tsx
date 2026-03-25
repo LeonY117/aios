@@ -32,8 +32,8 @@ export default function ConnectorHandle({
           opacity-0 scale-90 transition-all duration-200 ease-out
           ${
             isTarget
-              ? "bg-indigo-50 border-indigo-300"
-              : "bg-white border-gray-300"
+              ? "bg-indigo-50 dark:bg-indigo-950 border-indigo-300 dark:border-indigo-700"
+              : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
           }
           shadow-sm`}
       >
@@ -42,7 +42,7 @@ export default function ConnectorHandle({
           height="14"
           viewBox="0 0 14 14"
           fill="none"
-          className={isTarget ? "text-indigo-400" : "text-gray-300"}
+          className={isTarget ? "text-indigo-400 dark:text-indigo-500" : "text-gray-300 dark:text-gray-600"}
         >
           <path
             d="M7 2v10M2 7h10"

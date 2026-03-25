@@ -20,11 +20,12 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { oneLight, oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import ConnectorHandle from "./ConnectorHandle";
 import EditableTitle from "./EditableTitle";
 import { compileSingleContext } from "@/lib/context-export";
 import { ALL_MODELS, DEFAULT_MODEL_ID, getModelName, modelSupportsWebSearch } from "@/lib/ai/models-client";
+import { useColorScheme } from "@/lib/hooks/useColorScheme";
 import type { ChatNodeData, ChatMessage, ChatSource, AttachedSot, SotNodeData } from "@/types";
 import type { StreamEvent } from "@/app/api/chat/route";
 import type { Node } from "@xyflow/react";
@@ -86,6 +87,7 @@ function CodeBlock({
   className?: string;
   children?: React.ReactNode;
 }) {
+  const colorScheme = useColorScheme();
   const match = /language-(\w+)/.exec(className || "");
   const inline =
     !className &&
@@ -96,7 +98,7 @@ function CodeBlock({
   }
   return (
     <SyntaxHighlighter
-      style={oneLight}
+      style={colorScheme === "dark" ? oneDark : oneLight}
       language={match?.[1] ?? "text"}
       PreTag="div"
       customStyle={{ fontSize: "11px" }}
@@ -117,7 +119,7 @@ function SourcesDropdown({ sources }: { sources: ChatSource[] }) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="nodrag inline-flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+        className="nodrag inline-flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer"
       >
         <svg
           width="10"
@@ -156,7 +158,7 @@ function SourcesDropdown({ sources }: { sources: ChatSource[] }) {
               href={src.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="nodrag inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors truncate"
+              className="nodrag inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 transition-colors truncate"
             >
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
                 <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
@@ -220,9 +222,9 @@ function ModelSelector({
         onClick={() => setOpen(!open)}
         className={`nodrag flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] transition-colors ${
           disabled
-            ? "text-gray-400 cursor-not-allowed"
-            : "text-gray-500 hover:bg-gray-100 cursor-pointer"
-        } ${open ? "bg-gray-100" : ""}`}
+            ? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
+            : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+        } ${open ? "bg-gray-100 dark:bg-gray-700" : ""}`}
       >
         {getModelName(modelId)}
         {!disabled && (
@@ -241,7 +243,7 @@ function ModelSelector({
         )}
       </button>
       {open && (
-        <div className="absolute bottom-full left-0 mb-1 w-44 rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-50">
+        <div className="absolute bottom-full left-0 mb-1 w-44 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 z-50">
           {ALL_MODELS.map((m) => (
             <button
               key={m.id}
@@ -250,8 +252,8 @@ function ModelSelector({
                 onChange(m.id);
                 setOpen(false);
               }}
-              className={`w-full flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 ${
-                m.id === modelId ? "bg-gray-50 font-medium" : ""
+              className={`w-full flex items-center px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                m.id === modelId ? "bg-gray-50 dark:bg-gray-700 font-medium" : ""
               }`}
             >
               {m.name}
@@ -285,15 +287,15 @@ function ContextBar({
       <button
         type="button"
         onClick={onToggle}
-        className="nodrag shrink-0 flex items-center gap-1.5 border-b border-gray-100 bg-gray-50/30 px-3 py-1.5 hover:bg-gray-50 transition-colors w-full text-left cursor-pointer"
+        className="nodrag shrink-0 flex items-center gap-1.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors w-full text-left cursor-pointer"
       >
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 dark:text-gray-500">
           <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
         </svg>
-        <span className="text-[10px] font-medium text-gray-400">
+        <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500">
           {sots.length} source{sots.length !== 1 ? "s" : ""} attached
         </span>
-        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-auto">
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-auto text-gray-300 dark:text-gray-600">
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
@@ -301,31 +303,31 @@ function ContextBar({
   }
 
   return (
-    <div className="shrink-0 border-b border-gray-100 bg-gray-50/50 px-3 py-2">
+    <div className="shrink-0 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 px-3 py-2">
       <button
         type="button"
         onClick={onToggle}
         className="nodrag flex items-center gap-1.5 mb-1.5 cursor-pointer"
       >
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 dark:text-gray-500">
           <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
         </svg>
-        <span className="text-[10px] font-medium text-gray-400">Attached context</span>
+        <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500">Attached context</span>
       </button>
       <div className="flex flex-wrap gap-1.5">
         {sots.map((sot) => (
           <div
             key={sot.nodeId}
-            className="nodrag flex items-center gap-1 rounded-md bg-white border border-gray-200 pl-1.5 pr-1 py-0.5 shadow-sm"
+            className="nodrag flex items-center gap-1 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 pl-1.5 pr-1 py-0.5 shadow-sm"
           >
             <div className={`w-1.5 h-1.5 rounded-full ${sot.color}`} />
-            <span className="text-[10px] font-medium text-gray-600">
+            <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300">
               {sot.title}
             </span>
             <button
               type="button"
               onClick={() => onRemove(sot.nodeId)}
-              className="text-gray-300 hover:text-gray-500 ml-0.5 cursor-pointer"
+              className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 ml-0.5 cursor-pointer"
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -403,8 +405,8 @@ function Composer({
     <div
       className={`shrink-0 mx-3 mb-2 rounded-lg border transition-colors ${
         isStreaming
-          ? "border-gray-200 bg-gray-50/50"
-          : "border-gray-200 focus-within:border-gray-300"
+          ? "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50"
+          : "border-gray-200 dark:border-gray-700 focus-within:border-gray-300 dark:focus-within:border-gray-600"
       }`}
     >
       <textarea
@@ -415,8 +417,8 @@ function Composer({
         value={input}
         onChange={handleInput}
         onKeyDown={handleKeyDown}
-        className={`nodrag ${selected ? "nowheel" : ""} w-full resize-none rounded-t-lg border-0 bg-transparent px-3 pt-2 pb-1 text-xs placeholder-gray-400 focus:outline-none focus:ring-0 ${
-          isStreaming ? "text-gray-400 cursor-not-allowed" : "text-gray-700"
+        className={`nodrag ${selected ? "nowheel" : ""} w-full resize-none rounded-t-lg border-0 bg-transparent px-3 pt-2 pb-1 text-xs placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-0 ${
+          isStreaming ? "text-gray-400 dark:text-gray-500 cursor-not-allowed" : "text-gray-700 dark:text-gray-200"
         }`}
         style={{ minHeight: "28px", maxHeight: "120px" }}
       />
@@ -434,10 +436,10 @@ function Composer({
               onClick={onWebSearchToggle}
               className={`nodrag flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] transition-colors cursor-pointer ${
                 isStreaming
-                  ? "text-gray-400 cursor-not-allowed"
+                  ? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
                   : webSearch
-                    ? "bg-blue-100 text-blue-600 hover:bg-blue-200"
-                    : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800"
+                    : "text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300"
               }`}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -474,7 +476,7 @@ function Composer({
               });
               onSend(text);
             }}
-            className="nodrag rounded-full bg-gray-900 p-1.5 text-white hover:bg-gray-800 transition-colors cursor-pointer"
+            className="nodrag rounded-full bg-gray-900 dark:bg-gray-100 p-1.5 text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-300 transition-colors cursor-pointer"
             title="Send"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -834,16 +836,16 @@ function ChatNode({
           handleClassName="!w-3 !h-3 !bg-transparent !border-0"
         />
         <ConnectorHandle type="source" />
-        <div className={`h-full rounded-lg border bg-white p-4 shadow-sm transition-all duration-150 ${selected ? "border-blue-400 ring-2 ring-blue-400/30" : "border-gray-200 hover:border-gray-300"}`}>
+        <div className={`h-full rounded-lg border bg-white dark:bg-gray-800 p-4 shadow-sm transition-all duration-150 ${selected ? "border-blue-400 ring-2 ring-blue-400/30" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}>
           <div className="mb-2 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900 truncate">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
               Loading conversation…
             </h3>
           </div>
           <div className="space-y-2">
-            <div className="h-3 w-full animate-pulse rounded bg-gray-200" />
-            <div className="h-3 w-4/5 animate-pulse rounded bg-gray-200" />
-            <div className="h-3 w-3/5 animate-pulse rounded bg-gray-200" />
+            <div className="h-3 w-full animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="h-3 w-4/5 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="h-3 w-3/5 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
           </div>
         </div>
       </>
@@ -876,14 +878,14 @@ function ChatNode({
           }}
         />
       )}
-      <div className={`chat-drop-content flex h-full flex-col rounded-lg border bg-white shadow-sm transition-all duration-150 ${selected ? "border-blue-400 ring-2 ring-blue-400/30" : "border-gray-200 hover:border-gray-300"}`}>
+      <div className={`chat-drop-content flex h-full flex-col rounded-lg border bg-white dark:bg-gray-800 shadow-sm transition-all duration-150 ${selected ? "border-blue-400 ring-2 ring-blue-400/30" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}>
         {/* Drag handle */}
         <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
-          <div className="h-[3px] w-6 rounded-full bg-gray-200" />
+          <div className="h-[3px] w-6 rounded-full bg-gray-200 dark:bg-gray-600" />
         </div>
 
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-gray-100 px-4 pb-2 min-w-0">
+        <div className="flex items-start justify-between border-b border-gray-100 dark:border-gray-700 px-4 pb-2 min-w-0">
           <EditableTitle title={data.title} onChange={handleTitleChange} />
           {!isInteractive && data.source && sourceBadgeColors[data.source] && (
             <span
@@ -916,8 +918,8 @@ function ChatNode({
                 data.isStreaming && msg.role === "assistant" && i === arr.length - 1;
               return msg.role === "user" ? (
                 <div key={i} className="flex justify-end">
-                  <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-gray-100 px-3 py-2">
-                    <div className="prose prose-xs prose-gray text-xs leading-relaxed text-gray-700">
+                  <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-gray-100 dark:bg-gray-700 px-3 py-2">
+                    <div className="prose prose-xs prose-gray dark:prose-invert text-xs leading-relaxed text-gray-700 dark:text-gray-200">
                       <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>
                         {msg.content}
                       </ReactMarkdown>
@@ -926,7 +928,7 @@ function ChatNode({
                 </div>
               ) : (
                 <div key={i}>
-                  <div className={`prose prose-xs prose-gray max-w-none text-xs leading-relaxed text-gray-600 ${isLastAssistant ? "streaming-prose" : ""}`}>
+                  <div className={`prose prose-xs prose-gray dark:prose-invert max-w-none text-xs leading-relaxed text-gray-600 dark:text-gray-300 ${isLastAssistant ? "streaming-prose" : ""}`}>
                     <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>
                       {msg.content}
                     </ReactMarkdown>
@@ -938,26 +940,26 @@ function ChatNode({
               );
             })}
             {isSearching && (
-              <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+              <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
                 Searching the web…
               </div>
             )}
             {data.isStreaming && !isSearching && (
-              <span className="inline-block w-1.5 h-3.5 bg-gray-400 animate-pulse" />
+              <span className="inline-block w-1.5 h-3.5 bg-gray-400 dark:bg-gray-500 animate-pulse" />
             )}
             <div ref={messagesEndRef} />
            </div>
           </div>
         ) : isInteractive ? (
           <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 dark:text-gray-500">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
             </div>
-            <p className="text-xs text-gray-400">Start a conversation</p>
-            <p className="text-[10px] text-gray-300 mt-1">Drag SOTs here to attach context</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Start a conversation</p>
+            <p className="text-[10px] text-gray-300 dark:text-gray-600 mt-1">Drag SOTs here to attach context</p>
           </div>
         ) : (
           <div className="flex-1" />
@@ -981,7 +983,7 @@ function ChatNode({
         )}
 
         {/* Bottom bar */}
-        <div className="flex h-[26px] shrink-0 items-center gap-1 border-t border-gray-100 px-2">
+        <div className="flex h-[26px] shrink-0 items-center gap-1 border-t border-gray-100 dark:border-gray-700 px-2">
           {/* Imported chat: link + refresh buttons */}
           {!isInteractive && data.sourceUrl && (
             <>
@@ -989,7 +991,7 @@ function ChatNode({
                 type="button"
                 onClick={handleCopyLink}
                 title="Copy source link"
-                className="nodrag rounded p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                className="nodrag rounded p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer"
               >
                 {linkCopied ? (
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1021,16 +1023,16 @@ function ChatNode({
           {/* Interactive: context summary */}
           {isInteractive && attachedSots.length > 0 && (
             <div className="flex items-center gap-1">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 dark:text-gray-500">
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
               </svg>
-              <span className="text-[10px] text-gray-400">
+              <span className="text-[10px] text-gray-400 dark:text-gray-500">
                 {attachedSots.length} source{attachedSots.length !== 1 ? "s" : ""}
               </span>
             </div>
           )}
           {isInteractive && attachedSots.length === 0 && (
-            <span className="text-[10px] text-gray-300">No context attached</span>
+            <span className="text-[10px] text-gray-300 dark:text-gray-600">No context attached</span>
           )}
 
           <div className="flex-1" />

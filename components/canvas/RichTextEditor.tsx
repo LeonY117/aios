@@ -70,7 +70,7 @@ export default function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "nodrag nokey prose prose-sm prose-gray max-w-none min-h-[60px] px-4 py-2 outline-none focus:outline-none leading-normal",
+          "nodrag nokey prose prose-sm prose-gray dark:prose-invert max-w-none min-h-[60px] px-4 py-2 outline-none focus:outline-none leading-normal",
       },
     },
   });
@@ -95,7 +95,7 @@ export default function RichTextEditor({
 
       {/* Bottom bar */}
       {renderActions && (
-        <div className="flex h-[26px] shrink-0 items-center border-t border-gray-100 px-2">
+        <div className="flex h-[26px] shrink-0 items-center border-t border-gray-100 dark:border-gray-700 px-2">
           <div className="flex-1" />
           {renderActions()}
         </div>
