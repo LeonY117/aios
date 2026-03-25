@@ -25,7 +25,7 @@ export default memo(function CanvasToolbar({
       <button
         onClick={onAddText}
         title="Add text block (T)"
-        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-fg-dim hover:bg-hover hover:text-fg transition-colors"
       >
         <svg
           width="18"
@@ -84,7 +84,7 @@ export default memo(function CanvasToolbar({
       <button
         onClick={onAddLink}
         title="Add from link (L)"
-        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-fg-dim hover:bg-hover hover:text-fg transition-colors"
       >
         <svg
           width="18"
@@ -107,7 +107,7 @@ export default memo(function CanvasToolbar({
       <button
         onClick={onAddChat}
         title="New chat (C)"
-        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-fg-dim hover:bg-hover hover:text-fg transition-colors"
       >
         <svg
           width="18"
@@ -129,7 +129,7 @@ export default memo(function CanvasToolbar({
       <button
         onClick={onAddContextBlock}
         title="Add context block (B)"
-        className="nodrag flex items-center gap-1.5 rounded-md bg-indigo-500 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-indigo-600 transition-colors"
+        className="nodrag flex items-center gap-1.5 rounded-md bg-accent px-2.5 py-1.5 text-sm font-medium text-white hover:bg-accent-hover transition-colors"
       >
         + Context
       </button>
