@@ -46,9 +46,9 @@ const sourceBadgeColors: Record<SotNodeData["sourceType"], string> = {
 
 function LoadingSkeleton({ data }: { data: SotNodeData }) {
   return (
-    <div className="h-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-colors duration-150 hover:border-gray-300">
+    <div className="h-full rounded-lg border border-line bg-surface p-4 shadow-sm transition-colors duration-150 hover:border-line-hover">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900 truncate">
+        <h3 className="text-sm font-semibold text-fg truncate">
           {data.title}
         </h3>
         <span
@@ -58,9 +58,9 @@ function LoadingSkeleton({ data }: { data: SotNodeData }) {
         </span>
       </div>
       <div className="space-y-2">
-        <div className="h-3 w-full animate-pulse rounded bg-gray-200" />
-        <div className="h-3 w-4/5 animate-pulse rounded bg-gray-200" />
-        <div className="h-3 w-3/5 animate-pulse rounded bg-gray-200" />
+        <div className="h-3 w-full animate-pulse rounded bg-handle" />
+        <div className="h-3 w-4/5 animate-pulse rounded bg-handle" />
+        <div className="h-3 w-3/5 animate-pulse rounded bg-handle" />
       </div>
     </div>
   );
@@ -178,10 +178,10 @@ function SotCardNode({
         handleClassName="!w-3 !h-3 !bg-transparent !border-0"
       />
       <ConnectorHandle type="source" />
-      <div className={`flex h-full flex-col rounded-lg border bg-white shadow-sm transition-all duration-150 ${selected ? "border-blue-400 ring-2 ring-blue-400/30" : "border-gray-200 hover:border-gray-300"}`}>
+      <div className={`flex h-full flex-col rounded-lg border bg-surface shadow-sm transition-all duration-150 ${selected ? "border-selection ring-2 ring-selection/30" : "border-line hover:border-line-hover"}`}>
         {/* Drag handle */}
         <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
-          <div className="h-[3px] w-6 rounded-full bg-gray-200" />
+          <div className="h-[3px] w-6 rounded-full bg-handle" />
         </div>
 
         {/* Header */}
@@ -210,7 +210,7 @@ function SotCardNode({
           </div>
         ) : isRichText ? (
           <div className="nodrag min-h-0 flex-1 overflow-hidden cursor-text">
-            <div className="px-4 pt-1 pb-0.5 text-[12px] font-semibold text-gray-300 truncate text-center">{data.title}</div>
+            <div className="px-4 pt-1 pb-0.5 text-[12px] font-semibold text-fg-faint truncate text-center">{data.title}</div>
             <RichTextEditor
               content={data.content}
               onChange={handleContentChange}
@@ -221,7 +221,7 @@ function SotCardNode({
                   type="button"
                   onClick={handleCopyContext}
                   title="Copy as context"
-                  className="nodrag rounded p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                  className="nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
                 >
                   {contextCopied ? (
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -240,19 +240,19 @@ function SotCardNode({
         ) : (
           <>
             <div className={`${selected ? "nowheel" : ""} min-h-0 flex-1 overflow-y-auto px-4 pb-3 cursor-text`}>
-              <div className="mx-auto max-w-xl text-xs leading-relaxed text-gray-600 prose prose-xs prose-gray">
+              <div className="mx-auto max-w-xl text-xs leading-relaxed text-fg-dim prose prose-xs">
                 <ReactMarkdown rehypePlugins={REHYPE_PLUGINS}>{data.content}</ReactMarkdown>
               </div>
             </div>
             {/* Bottom bar */}
-            <div className="flex h-[26px] shrink-0 items-center gap-1 border-t border-gray-100 px-2">
+            <div className="flex h-[26px] shrink-0 items-center gap-1 border-t border-line-subtle px-2">
               {data.sourceUrl && (
                 <>
                   <button
                     type="button"
                     onClick={handleCopyLink}
                     title="Copy source link"
-                    className="nodrag rounded p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                    className="nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
                   >
                     {linkCopied ? (
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -269,7 +269,7 @@ function SotCardNode({
                     type="button"
                     onClick={handleRefresh}
                     title="Refresh content"
-                    className={`nodrag rounded p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer ${refreshing ? "animate-spin" : ""}`}
+                    className={`nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer ${refreshing ? "animate-spin" : ""}`}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="23 4 23 10 17 10" />
@@ -285,7 +285,7 @@ function SotCardNode({
                 type="button"
                 onClick={handleCopyContext}
                 title="Copy as context"
-                className="nodrag rounded p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                className="nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
               >
                 {contextCopied ? (
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

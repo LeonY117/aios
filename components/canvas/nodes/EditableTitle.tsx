@@ -11,7 +11,7 @@ type EditableTitleProps = {
 export default function EditableTitle({
   title,
   onChange,
-  className = "text-sm font-semibold text-gray-900",
+  className = "text-sm font-semibold text-fg",
 }: EditableTitleProps) {
   const [focused, setFocused] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
@@ -52,7 +52,7 @@ export default function EditableTitle({
           ref.current?.blur();
         }
       }}
-      className={`nodrag outline-none cursor-text rounded-sm px-1 -mx-1 line-clamp-2 ${focused ? "shadow-[inset_0_0_0_1px_#d1d5db] bg-gray-50/50 line-clamp-none" : ""} ${className}`}
+      className={`nodrag outline-none cursor-text rounded-sm px-1 -mx-1 line-clamp-2 ${focused ? "shadow-[inset_0_0_0_1px_var(--line)] bg-surface-alt/50 line-clamp-none" : ""} ${className}`}
     />
   );
 }

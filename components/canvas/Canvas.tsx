@@ -35,6 +35,7 @@ import WorkspaceSidebar from "@/components/WorkspaceSidebar";
 import { useCanvasPaste } from "@/lib/hooks/useCanvasPaste";
 import { handleFileUpload } from "@/lib/hooks/useFileUpload";
 import { viewportCenter, topZIndex } from "@/lib/nodes";
+import { useTheme } from "@/lib/themes";
 import { useRouter } from "next/navigation";
 import {
   loadSession,
@@ -65,6 +66,7 @@ const edgeTypes = {
 type SaveStatus = "idle" | "saving" | "saved";
 
 function CanvasInner({ workspace }: { workspace: string }) {
+  const { theme } = useTheme();
   const router = useRouter();
   const [nodes, setNodesRaw, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -619,16 +621,13 @@ function CanvasInner({ workspace }: { workspace: string }) {
 
   // Refresh the snapshot at drag start as a fallback (e.g. single-node drag
   // without prior deselection).
-  const onNodeDragStart = useCallback(
-    (_event: React.MouseEvent, _node: Node, _draggedNodes: Node[]) => {
-      if (dragSelectionRef.current.length === 0) {
-        dragSelectionRef.current = nodesRef.current.filter(
-          (n) => n.selected && (n.type === "sotCard" || n.type === "contextBlock"),
-        );
-      }
-    },
-    [],
-  );
+  const onNodeDragStart = useCallback(() => {
+    if (dragSelectionRef.current.length === 0) {
+      dragSelectionRef.current = nodesRef.current.filter(
+        (n) => n.selected && (n.type === "sotCard" || n.type === "contextBlock"),
+      );
+    }
+  }, []);
 
   // When dragged SOT nodes are dropped onto a chat, create edges for all of them
   const onNodeDragStop = useCallback(
@@ -773,9 +772,10 @@ function CanvasInner({ workspace }: { workspace: string }) {
         onDrop={handleDrop}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
+        colorMode={theme.type}
         defaultEdgeOptions={{
           type: "center",
-          style: { stroke: "#94a3b8" },
+          style: { stroke: "var(--edge)" },
         }}
         connectionLineComponent={CenterConnectionLine}
         selectionOnDrag
@@ -809,7 +809,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
         onRenamed={handleRenamed}
       />
       {saveStatus !== "idle" && (
-        <div className="absolute bottom-6 left-6 text-xs text-slate-400 select-none">
+        <div className="absolute bottom-6 left-6 text-xs text-fg-muted select-none">
           {saveStatus === "saving" ? "Saving..." : "Saved"}
         </div>
       )}
@@ -833,21 +833,21 @@ export default function Canvas({ workspace }: { workspace: string }) {
           transform: scale(1) !important;
         }
         .connector-handle:hover .connector-handle-visual {
-          background-color: #eef2ff !important;
-          border-color: #818cf8 !important;
+          background-color: var(--connector-hover-bg) !important;
+          border-color: var(--connector-hover-border) !important;
         }
         .connector-handle:hover .connector-handle-visual svg {
-          color: #6366f1 !important;
+          color: var(--connector-hover-icon) !important;
         }
         .context-drop-handle:hover + .context-drop-content {
-          border-color: #818cf8 !important;
-          background-color: #e0e7ff !important;
-          box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25) !important;
+          border-color: var(--context-drop-border) !important;
+          background-color: var(--context-drop-bg) !important;
+          box-shadow: 0 0 0 3px var(--context-drop-shadow) !important;
         }
         .chat-drop-handle:hover + .chat-drop-content {
-          border-color: #93c5fd !important;
-          background-color: #eff6ff !important;
-          box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.3) !important;
+          border-color: var(--chat-drop-border) !important;
+          background-color: var(--chat-drop-bg) !important;
+          box-shadow: 0 0 0 3px var(--chat-drop-shadow) !important;
         }
       `}</style>
       <ReactFlowProvider>

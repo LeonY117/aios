@@ -20,7 +20,7 @@ export default memo(function CanvasToolbar({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-1 py-1 shadow-lg">
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 rounded-lg border border-line bg-surface px-1 py-1 shadow-lg">
       {/* Text button */}
       <button
         onClick={onAddText}
@@ -43,13 +43,13 @@ export default memo(function CanvasToolbar({
         </svg>
       </button>
 
-      <div className="h-5 w-px bg-gray-200" />
+      <div className="h-5 w-px bg-handle" />
 
       {/* Upload button */}
       <button
         onClick={() => fileInputRef.current?.click()}
         title="Upload file (txt, md, pdf)"
-        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+        className="nodrag flex items-center justify-center rounded-md px-2.5 py-1.5 text-fg-dim hover:bg-hover hover:text-fg transition-colors"
       >
         <svg
           width="18"
@@ -78,7 +78,7 @@ export default memo(function CanvasToolbar({
         }}
       />
 
-      <div className="h-5 w-px bg-gray-200" />
+      <div className="h-5 w-px bg-handle" />
 
       {/* Link button */}
       <button
@@ -101,7 +101,7 @@ export default memo(function CanvasToolbar({
         </svg>
       </button>
 
-      <div className="h-5 w-px bg-gray-200" />
+      <div className="h-5 w-px bg-handle" />
 
       {/* Chat button */}
       <button
@@ -123,7 +123,7 @@ export default memo(function CanvasToolbar({
         </svg>
       </button>
 
-      <div className="h-5 w-px bg-gray-200" />
+      <div className="h-5 w-px bg-handle" />
 
       {/* Context block button */}
       <button

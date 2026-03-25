@@ -32,8 +32,8 @@ export default function ConnectorHandle({
           opacity-0 scale-90 transition-all duration-200 ease-out
           ${
             isTarget
-              ? "bg-indigo-50 border-indigo-300"
-              : "bg-white border-gray-300"
+              ? "bg-accent-surface border-accent-line"
+              : "bg-surface border-line-hover"
           }
           shadow-sm`}
       >
@@ -42,7 +42,7 @@ export default function ConnectorHandle({
           height="14"
           viewBox="0 0 14 14"
           fill="none"
-          className={isTarget ? "text-indigo-400" : "text-gray-300"}
+          className={isTarget ? "text-accent" : "text-fg-faint"}
         >
           <path
             d="M7 2v10M2 7h10"
