@@ -296,6 +296,16 @@ export default function WorkspaceSidebar({
           </button>
         </div>
 
+        {/* New workspace button */}
+        <div className="border-b border-line-subtle px-3 py-2">
+          <button
+            onClick={() => setShowNewDialog(true)}
+            className="w-full rounded-md px-2 py-1.5 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg transition-colors"
+          >
+            + New workspace
+          </button>
+        </div>
+
         {/* Active session list */}
         <div className="flex-1 overflow-y-auto py-1">
           {activeSessions.map((session) => renderSessionItem(session, false))}
@@ -372,15 +382,6 @@ export default function WorkspaceSidebar({
           )}
         </div>
 
-        {/* New workspace button */}
-        <div className="border-t border-line-subtle px-3 py-2">
-          <button
-            onClick={() => setShowNewDialog(true)}
-            className="w-full rounded-md px-2 py-1.5 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg transition-colors"
-          >
-            + New workspace
-          </button>
-        </div>
       </div>
 
       {/* Delete confirmation dialog */}
