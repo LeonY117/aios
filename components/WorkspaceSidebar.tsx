@@ -11,6 +11,7 @@ type WorkspaceSidebarProps = {
   onCreated: (name: string) => void;
   onDeleted: (name: string) => void;
   onRenamed: (oldName: string, newName: string) => void;
+  onArchived: (name: string, archived: boolean) => void;
 };
 
 export default function WorkspaceSidebar({
@@ -19,6 +20,7 @@ export default function WorkspaceSidebar({
   onCreated,
   onDeleted,
   onRenamed,
+  onArchived,
 }: WorkspaceSidebarProps) {
   const { themeId, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
@@ -29,6 +31,7 @@ export default function WorkspaceSidebar({
   const [renamingSession, setRenamingSession] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [deletingSession, setDeletingSession] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const newInputRef = useRef<HTMLInputElement>(null);
 
@@ -57,6 +60,8 @@ export default function WorkspaceSidebar({
   }, [showNewDialog]);
 
   const sessionNames = sessions.map((s) => s.name);
+  const activeSessions = sessions.filter((s) => !s.archived);
+  const archivedSessions = sessions.filter((s) => s.archived);
 
   const isInvalidName = (name: string) =>
     !name || name === "." || name === ".." || name.includes("/");
@@ -69,11 +74,11 @@ export default function WorkspaceSidebar({
     onCreated(name);
     // Newest first — prepend
     const now = new Date().toISOString();
-    setSessions((s) => [{ name, createdAt: now, updatedAt: now }, ...s]);
+    setSessions((s) => [{ name, createdAt: now, updatedAt: now, archived: false }, ...s]);
   };
 
   const handleDelete = (name: string) => {
-    if (sessions.length <= 1) return;
+    if (activeSessions.length <= 1 && !sessions.find((s) => s.name === name)?.archived) return;
     setDeletingSession(name);
   };
 
@@ -94,6 +99,20 @@ export default function WorkspaceSidebar({
     onRenamed(oldName, name);
     setSessions((s) =>
       s.map((e) => (e.name === oldName ? { ...e, name } : e)),
+    );
+  };
+
+  const handleArchive = (name: string) => {
+    onArchived(name, true);
+    setSessions((s) =>
+      s.map((e) => (e.name === name ? { ...e, archived: true } : e)),
+    );
+  };
+
+  const handleUnarchive = (name: string) => {
+    onArchived(name, false);
+    setSessions((s) =>
+      s.map((e) => (e.name === name ? { ...e, archived: false } : e)),
     );
   };
 
@@ -118,6 +137,137 @@ export default function WorkspaceSidebar({
       </button>
     );
   }
+
+  const renderSessionItem = (
+    { name, archived }: SessionEntry,
+    isArchived: boolean,
+  ) => (
+    <div
+      key={name}
+      className={`group flex items-center gap-1 px-3 py-1.5 cursor-pointer text-sm transition-colors ${
+        name === currentSession
+          ? "bg-accent-surface text-accent font-medium"
+          : "text-fg-dim hover:bg-surface-alt"
+      }`}
+    >
+      {renamingSession === name ? (
+        <input
+          ref={renameInputRef}
+          value={renameValue}
+          onChange={(e) => setRenameValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleRename(name);
+            if (e.key === "Escape") setRenamingSession(null);
+          }}
+          onBlur={() => handleRename(name)}
+          className="flex-1 min-w-0 rounded border border-accent-line bg-transparent px-1.5 py-0.5 text-sm text-fg outline-none focus:ring-1 focus:ring-accent"
+        />
+      ) : (
+        <>
+          <button
+            onClick={() => {
+              if (name !== currentSession) onSwitch(name);
+            }}
+            className="flex-1 min-w-0 truncate text-left"
+          >
+            {name}
+          </button>
+          <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+            {!isArchived && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRenamingSession(name);
+                  setRenameValue(name);
+                }}
+                className="rounded p-0.5 text-fg-muted hover:text-fg-dim hover:bg-hover"
+                title="Rename"
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M8.5 1.5l2 2M1 11l.5-2L8.5 2l2 2-7 7-2 .5z" />
+                </svg>
+              </button>
+            )}
+            {isArchived ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleUnarchive(name);
+                }}
+                className="rounded p-0.5 text-fg-muted hover:text-fg-dim hover:bg-hover"
+                title="Unarchive"
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M1 3h10M2 3v7h8V3M4.5 5.5l1.5-1.5 1.5 1.5M6 4v4" />
+                </svg>
+              </button>
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleArchive(name);
+                }}
+                className="rounded p-0.5 text-fg-muted hover:text-fg-dim hover:bg-hover"
+                title="Archive"
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M1 3h10M2 3v7h8V3M4.5 6.5l1.5 1.5 1.5-1.5M6 8V4" />
+                </svg>
+              </button>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(name);
+              }}
+              className="rounded p-0.5 text-fg-muted hover:text-red-500 hover:bg-red-50"
+              title="Delete"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M2 3h8M4.5 3V2h3v1M3 3v7.5h6V3M5 5.5v3M7 5.5v3" />
+              </svg>
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -146,90 +296,23 @@ export default function WorkspaceSidebar({
           </button>
         </div>
 
-        {/* Session list */}
+        {/* Active session list */}
         <div className="flex-1 overflow-y-auto py-1">
-          {sessions.map(({ name }) => (
-            <div
-              key={name}
-              className={`group flex items-center gap-1 px-3 py-1.5 cursor-pointer text-sm transition-colors ${
-                name === currentSession
-                  ? "bg-accent-surface text-accent font-medium"
-                  : "text-fg-dim hover:bg-surface-alt"
-              }`}
-            >
-              {renamingSession === name ? (
-                <input
-                  ref={renameInputRef}
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleRename(name);
-                    if (e.key === "Escape") setRenamingSession(null);
-                  }}
-                  onBlur={() => handleRename(name)}
-                  className="flex-1 min-w-0 rounded border border-accent-line bg-transparent px-1.5 py-0.5 text-sm text-fg outline-none focus:ring-1 focus:ring-accent"
-                />
-              ) : (
-                <>
-                  <button
-                    onClick={() => {
-                      if (name !== currentSession) onSwitch(name);
-                    }}
-                    className="flex-1 min-w-0 truncate text-left"
-                  >
-                    {name}
-                  </button>
-                  <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setRenamingSession(name);
-                        setRenameValue(name);
-                      }}
-                      className="rounded p-0.5 text-fg-muted hover:text-fg-dim hover:bg-hover"
-                      title="Rename"
-                    >
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 12 12"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M8.5 1.5l2 2M1 11l.5-2L8.5 2l2 2-7 7-2 .5z" />
-                      </svg>
-                    </button>
-                    {sessions.length > 1 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(name);
-                        }}
-                        className="rounded p-0.5 text-fg-muted hover:text-red-500 hover:bg-red-50"
-                        title="Delete"
-                      >
-                        <svg
-                          width="12"
-                          height="12"
-                          viewBox="0 0 12 12"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M2 3h8M4.5 3V2h3v1M3 3v7.5h6V3M5 5.5v3M7 5.5v3" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
+          {activeSessions.map((session) => renderSessionItem(session, false))}
+
+          {/* Archived section */}
+          {archivedSessions.length > 0 && (
+            <div className="mt-2">
+              <button
+                onClick={() => setShowArchived(!showArchived)}
+                className="flex w-full items-center gap-1 px-3 py-1.5 text-xs text-fg-muted hover:text-fg-dim transition-colors"
+              >
+                <ChevronDownIcon className={`transition-transform ${showArchived ? "" : "-rotate-90"}`} />
+                Archived ({archivedSessions.length})
+              </button>
+              {showArchived && archivedSessions.map((session) => renderSessionItem(session, true))}
             </div>
-          ))}
+          )}
         </div>
 
         {/* Theme picker */}

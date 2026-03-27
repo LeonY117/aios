@@ -4,7 +4,7 @@ import path from "path";
 
 const SESSIONS_DIR = path.join(process.cwd(), "sessions");
 
-type SessionEntry = { name: string; createdAt: string; updatedAt: string };
+type SessionEntry = { name: string; createdAt: string; updatedAt: string; archived: boolean };
 
 export async function GET() {
   try {
@@ -23,6 +23,7 @@ export async function GET() {
               name: dir.name,
               createdAt: data.createdAt,
               updatedAt: data.updatedAt ?? mtime ?? data.createdAt,
+              archived: !!data.archived,
             };
           }
         } catch {
@@ -30,7 +31,7 @@ export async function GET() {
         }
         const dirStat = await fs.stat(path.join(SESSIONS_DIR, dir.name));
         const fallback = dirStat.birthtime.toISOString();
-        return { name: dir.name, createdAt: fallback, updatedAt: mtime ?? fallback };
+        return { name: dir.name, createdAt: fallback, updatedAt: mtime ?? fallback, archived: false };
       }),
     );
 

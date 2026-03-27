@@ -52,6 +52,7 @@ import {
   deleteNodeContent,
   deleteSession,
   renameSession,
+  archiveSession,
 } from "@/lib/persistence";
 
 const nodeTypes = {
@@ -153,6 +154,16 @@ function CanvasInner({ workspace }: { workspace: string }) {
       await renameSession(oldName, newName);
       if (workspace === oldName) {
         router.replace("/" + encodeURIComponent(newName));
+      }
+    },
+    [workspace, router],
+  );
+
+  const handleArchived = useCallback(
+    async (name: string, archived: boolean) => {
+      await archiveSession(name, archived);
+      if (archived && name === workspace) {
+        router.push("/");
       }
     },
     [workspace, router],
@@ -335,6 +346,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
         onCreated={handleCreated}
         onDeleted={handleDeleted}
         onRenamed={handleRenamed}
+        onArchived={handleArchived}
       />
       {saveStatus !== "idle" && (
         <div className="absolute bottom-6 left-6 text-xs text-fg-muted select-none">
