@@ -1,7 +1,29 @@
+// --- Shared unions ---
+
+export type SourceType = "notion" | "github" | "slack" | "url" | "chatgpt" | "manual" | "file" | "pdf";
+
+export type ChatSourceType = "chatgpt" | "claude" | "manual" | "interactive";
+
+// --- API response types ---
+
+export type SourceResult = {
+  title: string;
+  content: string;
+  sourceType: string;
+  sourceUrl: string;
+};
+
+export type ChatSourceResult = SourceResult & {
+  messages: ChatMessage[];
+  model?: string;
+};
+
+// --- Node data types ---
+
 export type SotNodeData = {
   title: string;
   content: string;
-  sourceType: "notion" | "github" | "slack" | "url" | "chatgpt" | "manual" | "file" | "pdf";
+  sourceType: SourceType;
   sourceUrl?: string;
   pdfUrl?: string;
   isLoading?: boolean;
@@ -31,7 +53,7 @@ export type AttachedSot = {
 
 export type ChatNodeData = {
   title: string;
-  source: "chatgpt" | "claude" | "manual" | "interactive";
+  source: ChatSourceType;
   model?: string;
   modelId?: string;
   messages: ChatMessage[];

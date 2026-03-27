@@ -143,7 +143,6 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
     if (saved !== currentThemeId) {
       setThemeIdInternal(saved);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const setTheme = useCallback(

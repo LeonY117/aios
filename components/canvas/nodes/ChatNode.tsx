@@ -27,7 +27,7 @@ import { compileSingleContext } from "@/lib/context-export";
 import { ALL_MODELS, DEFAULT_MODEL_ID, getModelName, modelSupportsWebSearch } from "@/lib/ai/models-client";
 import { useTheme } from "@/lib/themes";
 import type { ChatNodeData, ChatMessage, ChatSource, AttachedSot, SotNodeData } from "@/types";
-import type { StreamEvent } from "@/app/api/chat/route";
+import { streamChat } from "@/lib/api/chat-client";
 import type { Node } from "@xyflow/react";
 
 // ---------------------------------------------------------------------------
@@ -62,19 +62,7 @@ function selectConnectedSources(id: string) {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Shallow equality for useStore — avoids re-renders when the node list
-// hasn't actually changed (same length + same references).
-// ---------------------------------------------------------------------------
-
-function shallowArrayEqual<T>(a: T[], b: T[]): boolean {
-  if (a === b) return true;
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-}
+import { shallowArrayEqual } from "@/lib/canvas/shallow-equal";
 
 // ---------------------------------------------------------------------------
 // Shared sub-components
@@ -136,19 +124,7 @@ function SourcesDropdown({ sources }: { sources: ChatSource[] }) {
           <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
         </svg>
         {sources.length} source{sources.length !== 1 ? "s" : ""}
-        <svg
-          width="8"
-          height="8"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={`transition-transform ${open ? "rotate-180" : ""}`}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        <ChevronDownIcon width={8} height={8} className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
         <div className="mt-1 flex flex-col gap-0.5">
@@ -160,10 +136,7 @@ function SourcesDropdown({ sources }: { sources: ChatSource[] }) {
               rel="noopener noreferrer"
               className="nodrag inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-fg-muted hover:bg-hover hover:text-fg transition-colors truncate"
             >
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-              </svg>
+              <LinkIcon width={9} height={9} className="shrink-0" />
               {src.title || new URL(src.url).hostname}
             </a>
           ))}
@@ -173,10 +146,10 @@ function SourcesDropdown({ sources }: { sources: ChatSource[] }) {
   );
 }
 
-const SOURCE_ENDPOINT: Record<string, string> = {
-  chatgpt: "/api/sources/chatgpt",
-  claude: "/api/sources/claude",
-};
+import { SOURCE_ENDPOINT } from "@/lib/canvas/source-endpoints";
+import { copyWithFeedback } from "@/lib/canvas/clipboard";
+import { updateNodeData, removeEdgeBetween } from "@/lib/canvas/actions";
+import { CheckIcon, CopyIcon, LinkIcon, RefreshIcon, ChevronDownIcon } from "@/components/icons";
 
 const SOT_COLORS = [
   "bg-purple-400",
@@ -295,9 +268,7 @@ function ContextBar({
         <span className="text-[10px] font-medium text-fg-muted">
           {sots.length} source{sots.length !== 1 ? "s" : ""} attached
         </span>
-        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-auto text-fg-faint">
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        <ChevronDownIcon width={8} height={8} className="ml-auto text-fg-faint" />
       </button>
     );
   }
@@ -576,13 +547,7 @@ function ChatNode({
 
   const updateData = useCallback(
     (patch: Partial<ChatNodeData>) => {
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === id
-            ? { ...n, data: { ...(n.data as ChatNodeData), ...patch } }
-            : n,
-        ),
-      );
+      setNodes((nds) => updateNodeData<ChatNodeData>(nds, id, patch));
     },
     [id, setNodes],
   );
@@ -595,16 +560,12 @@ function ChatNode({
   const handleCopyContext = useCallback(() => {
     const fakeNode = { id, data } as Node<ChatNodeData>;
     const text = compileSingleContext(fakeNode);
-    navigator.clipboard.writeText(text);
-    setContextCopied(true);
-    setTimeout(() => setContextCopied(false), 2000);
+    copyWithFeedback(text, setContextCopied);
   }, [id, data]);
 
   const handleCopyLink = useCallback(() => {
     if (!data.sourceUrl) return;
-    navigator.clipboard.writeText(data.sourceUrl);
-    setLinkCopied(true);
-    setTimeout(() => setLinkCopied(false), 2000);
+    copyWithFeedback(data.sourceUrl, setLinkCopied);
   }, [data.sourceUrl]);
 
   const handleRefresh = useCallback(() => {
@@ -667,121 +628,76 @@ function ChatNode({
       const abortController = new AbortController();
       abortRef.current = abortController;
 
+      const collectedSources: ChatSource[] = [];
+
       try {
-        const modelId = data.modelId || DEFAULT_MODEL_ID;
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: currentMessages.map((m) => ({
-              role: m.role,
-              content: [{ type: "text", text: m.content }],
-            })),
-            modelId,
+        await streamChat(
+          {
+            messages: currentMessages,
+            modelId: data.modelId || DEFAULT_MODEL_ID,
             attachedSots: attachedSots.map((s) => ({
               title: s.title,
               content: s.content,
               sourceType: s.sourceType,
             })),
             webSearch: data.webSearch ?? false,
-          }),
-          signal: abortController.signal,
-        });
-
-        if (!res.ok) {
-          const err = await res.text();
-          updateData({
-            messages: [
-              ...currentMessages,
-              { role: "assistant", content: `Error: ${err}`, timestamp: Date.now() },
-            ],
-            isStreaming: false,
-          });
-          return;
-        }
-
-        const reader = res.body?.getReader();
-        if (!reader) return;
-
-        const decoder = new TextDecoder();
-        let assistantContent = "";
-        let buffer = "";
-        const sources: ChatSource[] = [];
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith("data: ")) continue;
-            const event = JSON.parse(trimmed.slice(6)) as StreamEvent;
-
-            switch (event.type) {
-              case "text":
-                assistantContent += event.text;
-                updateData({
-                  messages: [
-                    ...currentMessages,
-                    {
-                      role: "assistant" as const,
-                      content: assistantContent,
-                      timestamp: Date.now(),
-                      sources: sources.length > 0 ? [...sources] : undefined,
-                    },
-                  ],
-                });
-                break;
-              case "tool-call":
-                if (event.toolName === "web_search") {
-                  setIsSearching(true);
-                }
-                break;
-              case "source":
-                sources.push({ url: event.url, title: event.title });
-                break;
-              case "error":
-                assistantContent += `\n\nError: ${event.message}`;
-                break;
-            }
-          }
-        }
-
-        setIsSearching(false);
-
-        // Final update with sources
-        if (assistantContent) {
-          updateData({
-            messages: [
-              ...currentMessages,
-              {
-                role: "assistant" as const,
-                content: assistantContent,
-                timestamp: Date.now(),
-                sources: sources.length > 0 ? sources : undefined,
-              },
-            ],
-            isStreaming: false,
-          });
-
-        } else {
-          updateData({
-            messages: [
-              ...currentMessages,
-              {
-                role: "assistant",
-                content:
-                  "Something went wrong — the model returned an empty response. Check the server logs for details.",
-                timestamp: Date.now(),
-              },
-            ],
-            isStreaming: false,
-          });
-        }
+            signal: abortController.signal,
+          },
+          {
+            onTextDelta: (fullContent, sources) => {
+              updateData({
+                messages: [
+                  ...currentMessages,
+                  {
+                    role: "assistant" as const,
+                    content: fullContent,
+                    timestamp: Date.now(),
+                    sources: sources.length > 0 ? sources : undefined,
+                  },
+                ],
+              });
+            },
+            onToolCall: (toolName) => {
+              if (toolName === "web_search") {
+                setIsSearching(true);
+              }
+            },
+            onSource: (source) => {
+              collectedSources.push(source);
+            },
+            onComplete: (content, sources) => {
+              setIsSearching(false);
+              updateData({
+                messages: [
+                  ...currentMessages,
+                  {
+                    role: "assistant" as const,
+                    content,
+                    timestamp: Date.now(),
+                    sources: sources.length > 0 ? sources : undefined,
+                  },
+                ],
+                isStreaming: false,
+              });
+            },
+            onError: (error) => {
+              setIsSearching(false);
+              updateData({
+                messages: [
+                  ...currentMessages,
+                  {
+                    role: "assistant",
+                    content: error.startsWith("Something went wrong")
+                      ? error
+                      : `Error: ${error}`,
+                    timestamp: Date.now(),
+                  },
+                ],
+                isStreaming: false,
+              });
+            },
+          },
+        );
       } catch (err) {
         setIsSearching(false);
         if ((err as Error).name === "AbortError") {
@@ -819,7 +735,7 @@ function ChatNode({
 
   const handleRemoveSot = useCallback(
     (sotNodeId: string) => {
-      setEdges((eds) => eds.filter((e) => !(e.source === sotNodeId && e.target === id)));
+      setEdges((eds) => removeEdgeBetween(eds, sotNodeId, id));
     },
     [id, setEdges],
   );
@@ -994,14 +910,9 @@ function ChatNode({
                 className="nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
               >
                 {linkCopied ? (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
+                  <CheckIcon />
                 ) : (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                  </svg>
+                  <LinkIcon />
                 )}
               </button>
               <button
@@ -1010,12 +921,7 @@ function ChatNode({
                 title="Refresh content"
                 className={`nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer ${refreshing ? "animate-spin" : ""}`}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="23 4 23 10 17 10" />
-                  <polyline points="1 20 1 14 7 14" />
-                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
-                  <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
-                </svg>
+                <RefreshIcon />
               </button>
             </>
           )}
@@ -1043,14 +949,9 @@ function ChatNode({
             className="nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
           >
             {contextCopied ? (
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
+              <CheckIcon />
             ) : (
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-              </svg>
+              <CopyIcon />
             )}
           </button>
         </div>

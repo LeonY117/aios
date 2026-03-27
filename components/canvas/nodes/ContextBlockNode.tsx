@@ -29,14 +29,9 @@ function selectConnectedSots(id: string) {
   };
 }
 
-function shallowArrayEqual<T>(a: T[], b: T[]): boolean {
-  if (a === b) return true;
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-}
+import { shallowArrayEqual } from "@/lib/canvas/shallow-equal";
+import { copyWithFeedback } from "@/lib/canvas/clipboard";
+import { updateNodeData } from "@/lib/canvas/actions";
 
 function ContextBlockNode({
   id,
@@ -46,13 +41,7 @@ function ContextBlockNode({
   const { setNodes } = useReactFlow();
   const handleTitleChange = useCallback(
     (title: string) => {
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === id
-            ? { ...n, data: { ...(n.data as ContextBlockData), title } }
-            : n,
-        ),
-      );
+      setNodes((nds) => updateNodeData<ContextBlockData>(nds, id, { title }));
     },
     [id, setNodes],
   );
@@ -70,9 +59,7 @@ function ContextBlockNode({
   const handleCopy = () => {
     const compiled = compileContext(sotNodes);
     if (!compiled) return;
-    navigator.clipboard.writeText(compiled);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    copyWithFeedback(compiled, setCopied);
   };
 
   return (

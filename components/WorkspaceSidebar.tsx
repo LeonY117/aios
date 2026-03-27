@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { SessionEntry } from "@/lib/persistence";
 import { useTheme, themeList } from "@/lib/themes";
+import { ChevronDownIcon } from "@/components/icons";
 
 type WorkspaceSidebarProps = {
   currentSession: string;
@@ -242,19 +243,7 @@ export default function WorkspaceSidebar({
               <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
             </svg>
             Theme
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className={`ml-auto transition-transform ${themeOpen ? "rotate-180" : ""}`}
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
+            <ChevronDownIcon className={`ml-auto transition-transform ${themeOpen ? "rotate-180" : ""}`} />
           </button>
           {themeOpen && (
             <div className="mt-1 flex flex-col gap-0.5">

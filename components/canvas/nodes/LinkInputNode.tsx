@@ -3,6 +3,7 @@
 import { memo, useState } from "react";
 import { NodeResizer, useReactFlow, type NodeProps } from "@xyflow/react";
 import { handleLinkAdd } from "@/lib/hooks/useCanvasPaste";
+import { LinkIcon } from "@/components/icons";
 
 type LinkInputNodeData = Record<string, never>;
 
@@ -42,20 +43,7 @@ function LinkInputNode({
         </div>
         <div className="flex flex-1 flex-col px-4 pb-4">
         <div className="mb-3 flex items-center gap-2">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="shrink-0 text-fg-muted"
-          >
-            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-          </svg>
+          <LinkIcon width={16} height={16} className="shrink-0 text-fg-muted" />
           <span className="text-sm font-semibold text-fg">
             Add from Link
           </span>

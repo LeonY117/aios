@@ -14,6 +14,10 @@ import EditableTitle from "./EditableTitle";
 import { compileSingleContext } from "@/lib/context-export";
 import type { SotNodeData } from "@/types";
 import type { Node } from "@xyflow/react";
+import { SOURCE_ENDPOINT } from "@/lib/canvas/source-endpoints";
+import { copyWithFeedback } from "@/lib/canvas/clipboard";
+import { updateNodeData } from "@/lib/canvas/actions";
+import { CheckIcon, CopyIcon, LinkIcon, RefreshIcon } from "@/components/icons";
 
 const REHYPE_PLUGINS = [rehypeRaw];
 
@@ -23,15 +27,6 @@ function extractFirstLine(html: string): string {
   if (!match) return "";
   return match[1].replace(/<[^>]*>/g, "").trim();
 }
-
-const SOURCE_ENDPOINT: Record<string, string> = {
-  github: "/api/sources/github",
-  notion: "/api/sources/notion",
-  slack: "/api/sources/slack",
-  url: "/api/sources/url",
-  chatgpt: "/api/sources/chatgpt",
-  claude: "/api/sources/claude",
-};
 
 const sourceBadgeColors: Record<SotNodeData["sourceType"], string> = {
   notion: "bg-gray-800 text-white",
@@ -81,16 +76,12 @@ function SotCardNode({
   const handleCopyContext = useCallback(() => {
     const fakeNode = { id, data } as Node<SotNodeData>;
     const text = compileSingleContext(fakeNode);
-    navigator.clipboard.writeText(text);
-    setContextCopied(true);
-    setTimeout(() => setContextCopied(false), 2000);
+    copyWithFeedback(text, setContextCopied);
   }, [id, data]);
 
   const handleCopyLink = useCallback(() => {
     if (!data.sourceUrl) return;
-    navigator.clipboard.writeText(data.sourceUrl);
-    setLinkCopied(true);
-    setTimeout(() => setLinkCopied(false), 2000);
+    copyWithFeedback(data.sourceUrl, setLinkCopied);
   }, [data.sourceUrl]);
 
   const handleRefresh = useCallback(() => {
@@ -105,18 +96,10 @@ function SotCardNode({
       .then((res) => res.json())
       .then((result) => {
         setNodes((nds) =>
-          nds.map((n) =>
-            n.id === id
-              ? {
-                  ...n,
-                  data: {
-                    ...(n.data as SotNodeData),
-                    title: result.title,
-                    content: result.content,
-                  },
-                }
-              : n,
-          ),
+          updateNodeData<SotNodeData>(nds, id, {
+            title: result.title,
+            content: result.content,
+          }),
         );
       })
       .finally(() => setRefreshing(false));
@@ -124,30 +107,22 @@ function SotCardNode({
 
   const handleContentChange = useCallback(
     (html: string) => {
-      setNodes((nds) =>
-        nds.map((n) => {
-          if (n.id !== id) return n;
-          const d = n.data as SotNodeData;
-          const updates: Partial<SotNodeData> = { content: html };
-          if (d.sourceType === "manual") {
-            updates.title = extractFirstLine(html) || "Untitled";
-          }
-          return { ...n, data: { ...d, ...updates } };
-        }),
-      );
+      setNodes((nds) => {
+        const node = nds.find((n) => n.id === id);
+        const d = node?.data as SotNodeData | undefined;
+        const updates: Partial<SotNodeData> = { content: html };
+        if (d?.sourceType === "manual") {
+          updates.title = extractFirstLine(html) || "Untitled";
+        }
+        return updateNodeData<SotNodeData>(nds, id, updates);
+      });
     },
     [id, setNodes],
   );
 
   const handleTitleChange = useCallback(
     (title: string) => {
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === id
-            ? { ...n, data: { ...(n.data as SotNodeData), title } }
-            : n,
-        ),
-      );
+      setNodes((nds) => updateNodeData<SotNodeData>(nds, id, { title }));
     },
     [id, setNodes],
   );
@@ -224,14 +199,9 @@ function SotCardNode({
                   className="nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
                 >
                   {contextCopied ? (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
+                    <CheckIcon />
                   ) : (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                    </svg>
+                    <CopyIcon />
                   )}
                 </button>
               )}
@@ -255,14 +225,9 @@ function SotCardNode({
                     className="nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
                   >
                     {linkCopied ? (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
+                      <CheckIcon />
                     ) : (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                      </svg>
+                      <LinkIcon />
                     )}
                   </button>
                   <button
@@ -271,12 +236,7 @@ function SotCardNode({
                     title="Refresh content"
                     className={`nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer ${refreshing ? "animate-spin" : ""}`}
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="23 4 23 10 17 10" />
-                      <polyline points="1 20 1 14 7 14" />
-                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
-                      <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
-                    </svg>
+                    <RefreshIcon />
                   </button>
                 </>
               )}
@@ -288,14 +248,9 @@ function SotCardNode({
                 className="nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
               >
                 {contextCopied ? (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
+                  <CheckIcon />
                 ) : (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
+                  <CopyIcon />
                 )}
               </button>
             </div>

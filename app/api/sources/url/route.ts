@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { extract } from "@extractus/article-extractor";
 import TurndownService from "turndown";
+import { sourceErrorResponse } from "@/lib/sources/helpers";
 
 function parseOgTags(html: string): { title?: string; description?: string } {
   const titleMatch = html.match(
@@ -90,18 +91,8 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({
-      title: url,
-      content: "Could not extract content from this URL.",
-      sourceType: "url",
-      sourceUrl: url,
-    });
+    return sourceErrorResponse(url, "url", "Could not extract content from this URL.");
   } catch {
-    return NextResponse.json({
-      title: url,
-      content: "Failed to fetch or extract content from this URL.",
-      sourceType: "url",
-      sourceUrl: url,
-    });
+    return sourceErrorResponse(url, "url", "Failed to fetch or extract content from this URL.");
   }
 }

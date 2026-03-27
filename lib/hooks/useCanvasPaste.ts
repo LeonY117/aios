@@ -5,17 +5,9 @@ import { viewportCenter } from "@/lib/nodes";
 import type { SotNodeData, ChatNodeData, ChatMessage } from "@/types";
 import { topZIndex } from "@/lib/nodes";
 import { isPendingEditorFocus } from "@/lib/editor-focus-signal";
+import { SOURCE_ENDPOINT } from "@/lib/canvas/source-endpoints";
 
 type SetNodes = React.Dispatch<React.SetStateAction<Node[]>>;
-
-const SOURCE_ENDPOINT: Record<string, string> = {
-  github: "/api/sources/github",
-  notion: "/api/sources/notion",
-  slack: "/api/sources/slack",
-  url: "/api/sources/url",
-  chatgpt: "/api/sources/chatgpt",
-  claude: "/api/sources/claude",
-};
 
 /**
  * Handles adding a URL-based node to the canvas.

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, memo } from "react";
 import { ViewportPortal, useStore } from "@xyflow/react";
+import { ChevronDownIcon } from "@/components/icons";
 import type { Node } from "@xyflow/react";
 import type { ChatNodeData } from "@/types";
 
@@ -161,18 +162,7 @@ export default memo(function GroupConnectorToolbar({
                 className="flex items-center gap-1 rounded-lg bg-action px-2.5 py-1 text-xs font-medium text-white hover:bg-action-hover transition-colors"
               >
                 Add to chat
-                <svg
-                  width="10"
-                  height="10"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
+                <ChevronDownIcon />
               </button>
 
               {dropdownOpen && (

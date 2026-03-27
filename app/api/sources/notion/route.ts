@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Client } from "@notionhq/client";
 import { NotionToMarkdown } from "notion-to-md";
 import MarkdownIt from "markdown-it";
+import { sourceErrorResponse, missingEnvResponse } from "@/lib/sources/helpers";
 
 const md = new MarkdownIt();
 
@@ -41,23 +42,12 @@ export async function POST(request: Request) {
 
   const pageId = extractPageId(url);
   if (!pageId) {
-    return NextResponse.json({
-      title: url,
-      content: "**Could not parse Notion URL.** Expected a Notion page link.",
-      sourceType: "notion",
-      sourceUrl: url,
-    });
+    return sourceErrorResponse(url, "notion", "**Could not parse Notion URL.** Expected a Notion page link.");
   }
 
   const token = process.env.NOTION_API_TOKEN;
   if (!token) {
-    return NextResponse.json({
-      title: url,
-      content:
-        "**Set `NOTION_API_TOKEN` in `.env.local`** to fetch Notion content.\n\nCreate an integration at https://www.notion.so/my-integrations and share the page with it.",
-      sourceType: "notion",
-      sourceUrl: url,
-    });
+    return missingEnvResponse(url, "notion", "NOTION_API_TOKEN", "Create an integration at https://www.notion.so/my-integrations and share the page with it.");
   }
 
   const notion = new Client({ auth: token });
@@ -83,12 +73,6 @@ export async function POST(request: Request) {
       sourceUrl: url,
     });
   } catch {
-    return NextResponse.json({
-      title: url,
-      content:
-        "**Failed to fetch Notion page.** Make sure the page is shared with your integration and the URL is correct.",
-      sourceType: "notion",
-      sourceUrl: url,
-    });
+    return sourceErrorResponse(url, "notion", "**Failed to fetch Notion page.** Make sure the page is shared with your integration and the URL is correct.");
   }
 }

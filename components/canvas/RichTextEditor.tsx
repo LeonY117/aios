@@ -16,11 +16,15 @@ import { clearPendingEditorFocus } from "@/lib/editor-focus-signal";
 const CustomTaskItem = TaskItem.extend({
   addNodeView() {
     const parentNodeView = this.parent?.();
-    if (!parentNodeView) return parentNodeView as any;
-    return (props: any) => {
-      const result = parentNodeView(props);
+    if (!parentNodeView) return null;
+    return (props: unknown) => {
+      const result = parentNodeView(props as never);
       // Prevent Tab from focusing the checkbox
-      const cb = (result.dom as HTMLElement).querySelector('input[type="checkbox"]');
+      const dom = (result as { dom?: Element | null }).dom;
+      const cb =
+        dom instanceof HTMLElement
+          ? dom.querySelector('input[type="checkbox"]')
+          : null;
       if (cb) (cb as HTMLElement).tabIndex = -1;
       return result;
     };

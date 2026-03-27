@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sourceErrorResponse, missingEnvResponse } from "@/lib/sources/helpers";
 
 // Extract channel ID and message timestamp from a Slack permalink
 // https://{workspace}.slack.com/archives/{channelId}/p{timestamp}
@@ -41,23 +42,12 @@ export async function POST(request: Request) {
 
   const match = url.match(SLACK_URL_RE);
   if (!match) {
-    return NextResponse.json({
-      title: url,
-      content: "**Could not parse Slack URL.** Expected a message permalink.",
-      sourceType: "slack",
-      sourceUrl: url,
-    });
+    return sourceErrorResponse(url, "slack", "**Could not parse Slack URL.** Expected a message permalink.");
   }
 
   const token = process.env.SLACK_BOT_TOKEN;
   if (!token) {
-    return NextResponse.json({
-      title: url,
-      content:
-        "**Set `SLACK_BOT_TOKEN` in `.env.local`** to fetch Slack content.\n\nCreate a Slack app at https://api.slack.com/apps with scopes: `channels:history`, `channels:read`, `groups:history`, `groups:read`, `users:read`.",
-      sourceType: "slack",
-      sourceUrl: url,
-    });
+    return missingEnvResponse(url, "slack", "SLACK_BOT_TOKEN", "Create a Slack app at https://api.slack.com/apps with scopes: `channels:history`, `channels:read`, `groups:history`, `groups:read`, `users:read`.");
   }
 
   const channelId = match[1];
@@ -120,13 +110,7 @@ export async function POST(request: Request) {
     }
 
     if (messages.length === 0) {
-      return NextResponse.json({
-        title: url,
-        content:
-          "**Could not fetch Slack message.** Check that the bot has access to this channel.",
-        sourceType: "slack",
-        sourceUrl: url,
-      });
+      return sourceErrorResponse(url, "slack", "**Could not fetch Slack message.** Check that the bot has access to this channel.");
     }
 
     // Fetch channel name
@@ -184,12 +168,6 @@ export async function POST(request: Request) {
       sourceUrl: url,
     });
   } catch {
-    return NextResponse.json({
-      title: url,
-      content:
-        "**Failed to fetch Slack content.** Check that the URL is correct and your `SLACK_BOT_TOKEN` has access to this channel.",
-      sourceType: "slack",
-      sourceUrl: url,
-    });
+    return sourceErrorResponse(url, "slack", "**Failed to fetch Slack content.** Check that the URL is correct and your `SLACK_BOT_TOKEN` has access to this channel.");
   }
 }

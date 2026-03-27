@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Octokit } from "@octokit/rest";
+import { sourceErrorResponse, missingEnvResponse } from "@/lib/sources/helpers";
 
 // groups: [1]=owner, [2]=repo, [3]=pull|issues, [4]=number
 const PR_OR_ISSUE_RE =
@@ -10,23 +11,12 @@ export async function POST(request: Request) {
 
   const match = url.match(PR_OR_ISSUE_RE);
   if (!match) {
-    return NextResponse.json({
-      title: url,
-      content: "**Could not parse GitHub URL.** Expected a PR or issue link.",
-      sourceType: "github",
-      sourceUrl: url,
-    });
+    return sourceErrorResponse(url, "github", "**Could not parse GitHub URL.** Expected a PR or issue link.");
   }
 
   const token = process.env.GITHUB_TOKEN;
   if (!token) {
-    return NextResponse.json({
-      title: url,
-      content:
-        "**Set `GITHUB_TOKEN` in `.env.local`** to fetch GitHub content.\n\nCreate a personal access token at https://github.com/settings/tokens with `repo` scope.",
-      sourceType: "github",
-      sourceUrl: url,
-    });
+    return missingEnvResponse(url, "github", "GITHUB_TOKEN", "Create a personal access token at https://github.com/settings/tokens with `repo` scope.");
   }
 
   const [, owner, repo, , number] = match;
@@ -123,12 +113,6 @@ export async function POST(request: Request) {
       });
     }
   } catch {
-    return NextResponse.json({
-      title: url,
-      content:
-        "**Failed to fetch GitHub content.** Check that the URL is correct and your `GITHUB_TOKEN` has access to this repository.",
-      sourceType: "github",
-      sourceUrl: url,
-    });
+    return sourceErrorResponse(url, "github", "**Failed to fetch GitHub content.** Check that the URL is correct and your `GITHUB_TOKEN` has access to this repository.");
   }
 }

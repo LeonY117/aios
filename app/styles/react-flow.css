@@ -1,0 +1,101 @@
+/* ─── React Flow overrides ─────────────────────────────────── */
+
+/* Edge hover pulse & selection */
+.react-flow__edge .react-flow__edge-path {
+  transition: stroke-width 0.2s ease, stroke 0.2s ease, stroke-opacity 0.2s ease;
+  stroke-opacity: 0.5;
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 3.5 !important;
+  stroke: var(--edge-active) !important;
+  stroke-opacity: 1 !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: 3 !important;
+  stroke: var(--edge-active) !important;
+  stroke-opacity: 1 !important;
+}
+
+/* When any node is selected: dim unconnected edges, highlight connected ones */
+.react-flow__edge .react-flow__edge-path.has-selection {
+  stroke-opacity: 0.15;
+}
+
+.react-flow__edge .react-flow__edge-path.connected-to-selected {
+  stroke-width: 3;
+  stroke: var(--edge-active);
+  stroke-opacity: 1;
+}
+
+/* Override React Flow's default cursors so the canvas feels like a normal UI.
+   Only the .custom-drag-handle keeps grab cursor. */
+.react-flow__pane,
+.react-flow__pane.draggable {
+  cursor: default !important;
+}
+.react-flow__node,
+.react-flow__node.selectable,
+.react-flow__node.draggable,
+.react-flow__node.draggable.dragging {
+  cursor: default !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  user-select: text !important;
+}
+
+/* Static selection box around selected nodes */
+.react-flow__nodesselection-rect,
+.react-flow .react-flow__nodesselection-rect {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 2px solid var(--selection) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--selection) 30%, transparent) !important;
+  border-radius: 8px !important;
+}
+
+.react-flow__nodesselection {
+  z-index: 10001 !important;
+  pointer-events: none !important;
+}
+.react-flow__nodesselection-rect {
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+/* Hide per-node connector handles when group selection is active */
+.react-flow:has(.react-flow__nodesselection) .react-flow__node.selected .connector-handle-visual,
+.react-flow:has(.react-flow__nodesselection) .react-flow__node.selected:hover .connector-handle-visual {
+  opacity: 0 !important;
+  transform: scale(0.9) !important;
+  pointer-events: none !important;
+}
+
+/* Disable text selection while dragging an edge (class toggled via JS) */
+body.connecting-edge .react-flow__node {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Space+drag pan: grab cursor when space held, grabbing while dragging */
+body.space-held .react-flow__pane,
+body.space-held .react-flow__pane.draggable {
+  cursor: grab !important;
+}
+body.space-dragging .react-flow__pane,
+body.space-dragging .react-flow__pane.draggable {
+  cursor: grabbing !important;
+}
+
+/* Prevent text selection across nodes when shift-clicking to multi-select.
+   contenteditable (.tiptap) ignores parent user-select, so target it directly. */
+body.shift-held .react-flow__node,
+body.shift-held .react-flow__node.selectable,
+body.shift-held .react-flow__node.draggable,
+body.shift-held .tiptap {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  user-select: none !important;
+}
