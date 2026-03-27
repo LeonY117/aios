@@ -274,6 +274,11 @@ body.shift-held .tiptap {
   padding-left: 0 !important;
 }
 
+/* Nested task lists need indentation (top-level is 0 above) */
+.tiptap ul[data-type="taskList"] ul[data-type="taskList"] {
+  padding-left: 1.25em !important;
+}
+
 .tiptap ul[data-type="taskList"] li::before,
 .tiptap ul[data-type="taskList"] li::marker {
   content: none !important;
@@ -333,6 +338,12 @@ body.shift-held .tiptap {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
   line-height: inherit !important;
+}
+
+/* Horizontal rule — tame prose-sm's huge default margins */
+.tiptap hr {
+  margin-top: 0.75em !important;
+  margin-bottom: 0.75em !important;
 }
 
 /* Blockquote */
