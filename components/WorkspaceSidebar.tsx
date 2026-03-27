@@ -309,21 +309,25 @@ export default function WorkspaceSidebar({
         {/* Active session list */}
         <div className="flex-1 overflow-y-auto py-1">
           {activeSessions.map((session) => renderSessionItem(session, false))}
-
-          {/* Archived section */}
-          {archivedSessions.length > 0 && (
-            <div className="mt-2">
-              <button
-                onClick={() => setShowArchived(!showArchived)}
-                className="flex w-full items-center gap-1 px-3 py-1.5 text-xs text-fg-muted hover:text-fg-dim transition-colors"
-              >
-                <ChevronDownIcon className={`transition-transform ${showArchived ? "" : "-rotate-90"}`} />
-                Archived ({archivedSessions.length})
-              </button>
-              {showArchived && archivedSessions.map((session) => renderSessionItem(session, true))}
-            </div>
-          )}
         </div>
+
+        {/* Archived section */}
+        {archivedSessions.length > 0 && (
+          <div className="border-t border-line-subtle">
+            <button
+              onClick={() => setShowArchived(!showArchived)}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-fg-muted hover:text-fg-dim transition-colors"
+            >
+              <ChevronDownIcon className={`transition-transform ${showArchived ? "" : "-rotate-90"}`} />
+              Archived ({archivedSessions.length})
+            </button>
+            {showArchived && (
+              <div className="max-h-40 overflow-y-auto">
+                {archivedSessions.map((session) => renderSessionItem(session, true))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Theme picker */}
         <div className="border-t border-line-subtle px-3 py-2">
