@@ -313,7 +313,14 @@ export default function WorkspaceSidebar({
 
         {/* Archived section */}
         {archivedSessions.length > 0 && (
-          <div className="border-t border-line-subtle">
+          <div className="relative border-t border-line-subtle">
+            {showArchived && (
+              <div className="absolute bottom-full left-0 w-full px-3 pb-1">
+                <div className="max-h-40 overflow-y-auto rounded-lg border border-line bg-surface p-1.5 shadow-lg">
+                  {archivedSessions.map((session) => renderSessionItem(session, true))}
+                </div>
+              </div>
+            )}
             <button
               onClick={() => setShowArchived(!showArchived)}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-fg-muted hover:text-fg-dim transition-colors"
@@ -321,11 +328,6 @@ export default function WorkspaceSidebar({
               <ChevronDownIcon className={`transition-transform ${showArchived ? "" : "-rotate-90"}`} />
               Archived ({archivedSessions.length})
             </button>
-            {showArchived && (
-              <div className="max-h-40 overflow-y-auto">
-                {archivedSessions.map((session) => renderSessionItem(session, true))}
-              </div>
-            )}
           </div>
         )}
 
