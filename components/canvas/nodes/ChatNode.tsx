@@ -148,8 +148,12 @@ function SourcesDropdown({ sources }: { sources: ChatSource[] }) {
 
 import { SOURCE_ENDPOINT } from "@/lib/canvas/source-endpoints";
 import { copyWithFeedback } from "@/lib/canvas/clipboard";
-import { updateNodeData, removeEdgeBetween } from "@/lib/canvas/actions";
+import { updateNodeData, updateNode, removeEdgeBetween } from "@/lib/canvas/actions";
 import { CheckIcon, CopyIcon, LinkIcon, RefreshIcon, ChevronDownIcon } from "@/components/icons";
+import NodeWindowControls from "./NodeWindowControls";
+import MinimizedNodeView from "./MinimizedNodeView";
+import MaximizePortal from "./MaximizePortal";
+import type { NodeViewMode } from "@/types";
 
 const SOT_COLORS = [
   "bg-purple-400",
@@ -740,6 +744,32 @@ function ChatNode({
     [id, setEdges],
   );
 
+  const handleViewModeChange = useCallback(
+    (viewMode: NodeViewMode) => {
+      setNodes((nds) => {
+        const node = nds.find((n) => n.id === id);
+        if (!node) return nds;
+        const currentHeight = node.measured?.height ?? (node.style as Record<string, unknown>)?.height as number | undefined;
+        const savedHeight = (node.data as ChatNodeData & { _savedHeight?: number })._savedHeight;
+
+        if (viewMode === "minimized") {
+          return updateNode<ChatNodeData>(nds, id, { viewMode, _savedHeight: currentHeight } as Partial<ChatNodeData>, { height: undefined });
+        }
+        const restoreHeight = savedHeight ?? currentHeight;
+        return updateNode<ChatNodeData>(nds, id, { viewMode, _savedHeight: undefined } as Partial<ChatNodeData>, restoreHeight ? { height: restoreHeight } : {});
+      });
+    },
+    [id, setNodes],
+  );
+
+  const viewMode = data.viewMode ?? "normal";
+
+  const wordCount = useMemo(() => {
+    const msgs = data.messages ?? [];
+    const text = msgs.map((m) => m.content).join(" ");
+    return text.split(/\s+/).filter(Boolean).length;
+  }, [data.messages]);
+
   // --- Loading state ---
   if (data.isLoading) {
     return (
@@ -773,13 +803,13 @@ function ChatNode({
   return (
     <>
       <NodeResizer
-        isVisible
+        isVisible={viewMode !== "minimized"}
         minWidth={300}
-        minHeight={200}
+        minHeight={viewMode === "minimized" ? 0 : 200}
         lineClassName="!border-transparent !border-[3px]"
         handleClassName="!w-3 !h-3 !bg-transparent !border-0"
       />
-      <ConnectorHandle type="source" />
+      {viewMode !== "minimized" && <ConnectorHandle type="source" />}
       {/* Full-size invisible target handle — only active during edge drag */}
       {isInteractive && (
         <Handle
@@ -795,23 +825,28 @@ function ChatNode({
         />
       )}
       <div className={`chat-drop-content flex h-full flex-col rounded-lg border bg-surface shadow-sm transition-all duration-150 ${selected ? "border-selection ring-2 ring-selection/30" : "border-line hover:border-line-hover"}`}>
-        {/* Drag handle */}
+        {viewMode === "minimized" ? (
+          <MinimizedNodeView title={data.title} wordCount={wordCount} viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+        ) : (<>
         <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
           <div className="h-[3px] w-6 rounded-full bg-handle" />
         </div>
 
-        {/* Header */}
-        <div className="flex items-start justify-between border-b border-line-subtle px-4 pb-2 min-w-0">
-          <EditableTitle title={data.title} onChange={handleTitleChange} />
+        <div className="border-b border-line-subtle px-4 pb-2 min-w-0">
+          <div className="flex items-start justify-between">
+            <EditableTitle title={data.title} onChange={handleTitleChange} />
+            <NodeWindowControls viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+          </div>
           {!isInteractive && data.source && sourceBadgeColors[data.source] && (
             <span
-              className={`ml-2 mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${sourceBadgeColors[data.source]}`}
+              className={`mt-1 inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${sourceBadgeColors[data.source]}`}
             >
               {data.source}
             </span>
           )}
         </div>
 
+        {viewMode !== "maximized" && <>
         {/* Context bar (interactive only) */}
         {isInteractive && (
           <ContextBar
@@ -955,7 +990,137 @@ function ChatNode({
             )}
           </button>
         </div>
+        </>}
+        </>)}
+
       </div>
+
+      {/* Maximized overlay */}
+      {viewMode === "maximized" && (
+        <MaximizePortal onClose={() => handleViewModeChange("normal")}>
+          {/* Header */}
+          <div className="flex h-3.5 shrink-0 items-center justify-center rounded-t-xl">
+            <div className="h-[3px] w-6 rounded-full bg-handle" />
+          </div>
+          <div className="border-b border-line-subtle px-4 pb-2 min-w-0">
+            <div className="flex items-start justify-between">
+              <EditableTitle title={data.title} onChange={handleTitleChange} />
+              <NodeWindowControls viewMode="maximized" onViewModeChange={handleViewModeChange} />
+            </div>
+            {!isInteractive && data.source && sourceBadgeColors[data.source] && (
+              <span className={`mt-1 inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${sourceBadgeColors[data.source]}`}>
+                {data.source}
+              </span>
+            )}
+          </div>
+
+          {/* Context bar */}
+          {isInteractive && (
+            <ContextBar
+              sots={attachedSots}
+              collapsed={contextBarCollapsed}
+              onToggle={() => {
+                setHasUserToggledContext(true);
+                setContextCollapsed(!contextBarCollapsed);
+              }}
+              onRemove={handleRemoveSot}
+            />
+          )}
+
+          {/* Messages */}
+          {hasMessages ? (
+            <div className="min-h-0 flex-1 overflow-y-auto p-3 cursor-text">
+              <div className="mx-auto max-w-xl space-y-3">
+                {(data.messages ?? []).map((msg, i, arr) => {
+                  const isLastAssistant =
+                    data.isStreaming && msg.role === "assistant" && i === arr.length - 1;
+                  return msg.role === "user" ? (
+                    <div key={i} className="flex justify-end">
+                      <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-hover px-3 py-2">
+                        <div className="prose prose-xs text-xs leading-relaxed text-fg-dim">
+                          <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>{msg.content}</ReactMarkdown>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={i}>
+                      <div className={`prose prose-xs max-w-none text-xs leading-relaxed text-fg-dim ${isLastAssistant ? "streaming-prose" : ""}`}>
+                        <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>{msg.content}</ReactMarkdown>
+                      </div>
+                      {msg.sources && msg.sources.length > 0 && <SourcesDropdown sources={msg.sources} />}
+                    </div>
+                  );
+                })}
+                {isSearching && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-fg-muted">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                    Searching the web…
+                  </div>
+                )}
+                {data.isStreaming && !isSearching && (
+                  <span className="inline-block w-1.5 h-3.5 bg-fg-muted animate-pulse" />
+                )}
+              </div>
+            </div>
+          ) : isInteractive ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+              <div className="w-10 h-10 rounded-full bg-hover flex items-center justify-center mb-3">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-fg-muted">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </div>
+              <p className="text-xs text-fg-muted">Start a conversation</p>
+            </div>
+          ) : (
+            <div className="flex-1" />
+          )}
+
+          {/* Composer */}
+          {isInteractive && (
+            <Composer
+              modelId={data.modelId || DEFAULT_MODEL_ID}
+              webSearch={data.webSearch ?? false}
+              isStreaming={data.isStreaming ?? false}
+              onSend={handleSend}
+              onStop={handleStop}
+              onModelChange={(modelId) => updateData({
+                modelId,
+                ...(!modelSupportsWebSearch(modelId) ? { webSearch: false } : {}),
+              })}
+              onWebSearchToggle={() => updateData({ webSearch: !(data.webSearch ?? false) })}
+            />
+          )}
+
+          {/* Bottom bar */}
+          <div className="flex h-[26px] shrink-0 items-center gap-1 border-t border-line-subtle px-2">
+            {!isInteractive && data.sourceUrl && (
+              <>
+                <button type="button" onClick={handleCopyLink} title="Copy source link" className="rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer">
+                  {linkCopied ? <CheckIcon /> : <LinkIcon />}
+                </button>
+                <button type="button" onClick={handleRefresh} title="Refresh content" className={`rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer ${refreshing ? "animate-spin" : ""}`}>
+                  <RefreshIcon />
+                </button>
+              </>
+            )}
+            {isInteractive && attachedSots.length > 0 && (
+              <div className="flex items-center gap-1">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-fg-muted">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+                <span className="text-[10px] text-fg-muted">{attachedSots.length} source{attachedSots.length !== 1 ? "s" : ""}</span>
+              </div>
+            )}
+            {isInteractive && attachedSots.length === 0 && (
+              <span className="text-[10px] text-fg-faint">No context attached</span>
+            )}
+            <div className="flex-1" />
+            <button type="button" onClick={handleCopyContext} title="Copy as context" className="rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer">
+              {contextCopied ? <CheckIcon /> : <CopyIcon />}
+            </button>
+          </div>
+        </MaximizePortal>
+      )}
     </>
   );
 }

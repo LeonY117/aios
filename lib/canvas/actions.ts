@@ -17,6 +17,49 @@ export function updateNodeData<T extends Record<string, unknown>>(
   );
 }
 
+/** Update a single node's data AND dimensions by merging partial patches.
+ *  Sets both style.height and the top-level node height/measured so React Flow
+ *  actually re-renders at the new size (it caches measured dimensions).
+ *  Pass `height: undefined` in stylePatch to remove the height constraint (auto-size). */
+export function updateNode<T extends Record<string, unknown>>(
+  nodes: Node[],
+  nodeId: string,
+  dataPatch: Partial<T>,
+  stylePatch?: Record<string, unknown>,
+): Node[] {
+  return nodes.map((n) => {
+    if (n.id !== nodeId) return n;
+    // Build new style, removing keys set to undefined
+    const newStyle = { ...(n.style ?? {}), ...stylePatch };
+    for (const key of Object.keys(newStyle)) {
+      if ((newStyle as Record<string, unknown>)[key] === undefined) {
+        delete (newStyle as Record<string, unknown>)[key];
+      }
+    }
+    const updated: Node = {
+      ...n,
+      data: { ...n.data, ...dataPatch },
+      style: newStyle,
+    };
+    // Sync node-level height/width + clear measured cache so RF picks up the change
+    if (stylePatch && "height" in stylePatch) {
+      if (stylePatch.height != null) {
+        updated.height = stylePatch.height as number;
+        updated.measured = { ...n.measured, height: stylePatch.height as number };
+      } else {
+        // Removing height — clear measured so RF re-measures from DOM
+        updated.height = undefined;
+        updated.measured = undefined;
+      }
+    }
+    if (stylePatch?.width != null) {
+      updated.width = stylePatch.width as number;
+      updated.measured = { ...(updated.measured ?? n.measured), width: stylePatch.width as number };
+    }
+    return updated;
+  });
+}
+
 /** Select only SOT-type nodes (sotCard + contextBlock). */
 export function selectAllSots(nodes: Node[]): Node[] {
   return nodes.map((n) => ({
