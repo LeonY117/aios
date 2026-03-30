@@ -46,3 +46,5 @@ plans/
 local/
 tmp/
 sessions/
+prototype/*
+!prototype/CLAUDE.md
