@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   Handle,
   NodeResizer,
@@ -23,6 +24,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneLight, oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import ConnectorHandle from "./ConnectorHandle";
 import EditableTitle from "./EditableTitle";
+import BtwPanel from "./BtwPanel";
 import { compileSingleContext } from "@/lib/context-export";
 import { ALL_MODELS, DEFAULT_MODEL_ID, getModelName, modelSupportsWebSearch } from "@/lib/ai/models-client";
 import { useTheme } from "@/lib/themes";
@@ -149,6 +151,7 @@ function SourcesDropdown({ sources }: { sources: ChatSource[] }) {
 import { SOURCE_ENDPOINT } from "@/lib/canvas/source-endpoints";
 import { copyWithFeedback } from "@/lib/canvas/clipboard";
 import { updateNodeData, updateNode, removeEdgeBetween } from "@/lib/canvas/actions";
+import { createChatWindowNode, appendNode } from "@/lib/nodes";
 import { CheckIcon, CopyIcon, LinkIcon, RefreshIcon, ChevronDownIcon } from "@/components/icons";
 import NodeWindowControls from "./NodeWindowControls";
 import MinimizedNodeView from "./MinimizedNodeView";
@@ -466,6 +469,34 @@ function Composer({
 }
 
 // ---------------------------------------------------------------------------
+// BTW tooltip — speech bubble that appears above a text selection
+// ---------------------------------------------------------------------------
+
+function BtwTooltip({ x, y, onClick }: { x: number; y: number; onClick: () => void }) {
+  const left = x - 28;
+  const top = y - 40;
+
+  return createPortal(
+    <button
+      type="button"
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="fixed z-[9998] flex items-center justify-center rounded-full border border-line bg-surface w-7 h-7 shadow-md text-fg-muted hover:text-fg hover:border-line-hover hover:shadow-lg transition-all animate-[fadeIn_0.1s_ease] select-none"
+      style={{ left: x - 14, top: y - 36 }}
+      title="Quick ask (btw)"
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    </button>,
+    document.body,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main ChatNode
 // ---------------------------------------------------------------------------
 
@@ -480,7 +511,7 @@ function ChatNode({
   data,
   selected,
 }: NodeProps & { data: ChatNodeData }) {
-  const { setNodes, setEdges } = useReactFlow();
+  const { setNodes, setEdges, getNodes, screenToFlowPosition } = useReactFlow();
   const isConnecting = useStore(selectIsConnecting);
   const sourceSelector = useMemo(() => selectConnectedSources(id), [id]);
   const sourceNodes = useStore(sourceSelector, shallowArrayEqual);
@@ -493,6 +524,16 @@ function ChatNode({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef<number>(data.messages?.length ?? 0);
   const abortRef = useRef<AbortController | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // BTW quick-ask state
+  const [btwTooltip, setBtwTooltip] = useState<{
+    text: string;
+    x: number; // viewport center-X of selection
+    y: number; // viewport top-Y of selection
+    bottomY: number; // viewport bottom-Y of selection (panel anchor)
+  } | null>(null);
+  const [btwPanelOpen, setBtwPanelOpen] = useState(false);
 
   const isInteractive = data.source === "interactive";
 
@@ -554,6 +595,72 @@ function ChatNode({
       setNodes((nds) => updateNodeData<ChatNodeData>(nds, id, patch));
     },
     [id, setNodes],
+  );
+
+  // BTW: detect text selection within the messages container
+  const handleMessagesMouseUp = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+    const text = selection.toString().trim();
+    if (text.length < 3) return;
+
+    // Only react when selection is inside our messages container
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const anchorNode = selection.anchorNode;
+    if (!anchorNode || !container.contains(anchorNode)) return;
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    setBtwTooltip({
+      text,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+      bottomY: rect.bottom,
+    });
+    setBtwPanelOpen(false);
+  }, []);
+
+  // Hide tooltip when selection is cleared (unless panel is open)
+  useEffect(() => {
+    if (!btwTooltip || btwPanelOpen) return;
+    const onSelChange = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+        setBtwTooltip(null);
+      }
+    };
+    document.addEventListener("selectionchange", onSelChange);
+    return () => document.removeEventListener("selectionchange", onSelChange);
+  }, [btwTooltip, btwPanelOpen]);
+
+  const handleBtwKeep = useCallback(
+    (btwMessages: ChatMessage[]) => {
+      // Derive a title from the first user message
+      const firstUser = btwMessages.find((m) => m.role === "user");
+      const title = firstUser
+        ? firstUser.content.slice(0, 40) + (firstUser.content.length > 40 ? "…" : "")
+        : "Quick ask";
+
+      // Position the new node to the right of the current node
+      const currentNode = getNodes().find((n) => n.id === id);
+      const currentWidth = (currentNode?.style?.width as number | undefined) ?? 380;
+      const currentPos = currentNode?.position ?? { x: 0, y: 0 };
+      const position = {
+        x: currentPos.x + currentWidth + 40,
+        y: currentPos.y,
+      };
+
+      const newNode = createChatWindowNode(position);
+      (newNode.data as ChatNodeData).title = title;
+      (newNode.data as ChatNodeData).messages = btwMessages;
+
+      setNodes((nds) => appendNode(nds, newNode));
+      setBtwPanelOpen(false);
+      setBtwTooltip(null);
+    },
+    [id, getNodes, setNodes],
   );
 
   const handleTitleChange = useCallback(
@@ -862,7 +969,7 @@ function ChatNode({
 
         {/* Messages or empty state */}
         {hasMessages ? (
-          <div className={`${selected ? "nowheel" : ""} min-h-0 flex-1 overflow-y-auto p-3 cursor-text`}>
+          <div ref={messagesContainerRef} onMouseUp={handleMessagesMouseUp} className={`${selected ? "nowheel" : ""} min-h-0 flex-1 overflow-y-auto p-3 cursor-text`}>
            <div className="mx-auto max-w-xl space-y-3">
             {(data.messages ?? []).map((msg, i, arr) => {
               const isLastAssistant =
@@ -1120,6 +1227,30 @@ function ChatNode({
             </button>
           </div>
         </MaximizePortal>
+      )}
+
+      {/* BTW speech-bubble tooltip */}
+      {btwTooltip && !btwPanelOpen && (
+        <BtwTooltip
+          x={btwTooltip.x}
+          y={btwTooltip.y}
+          onClick={() => setBtwPanelOpen(true)}
+        />
+      )}
+
+      {/* BTW mini-chat panel */}
+      {btwTooltip && btwPanelOpen && (
+        <BtwPanel
+          selectedText={btwTooltip.text}
+          anchorX={btwTooltip.x}
+          anchorY={btwTooltip.bottomY}
+          modelId={data.modelId}
+          onKeep={handleBtwKeep}
+          onClose={() => {
+            setBtwPanelOpen(false);
+            setBtwTooltip(null);
+          }}
+        />
       )}
     </>
   );
