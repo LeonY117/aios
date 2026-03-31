@@ -19,6 +19,7 @@ export type ChatStreamOptions = {
   attachedSots: { title: string; content: string; sourceType: string }[];
   webSearch: boolean;
   signal?: AbortSignal;
+  btw?: { selectedText: string };
 };
 
 // ---------------------------------------------------------------------------
@@ -40,6 +41,7 @@ export async function streamChat(
       modelId: options.modelId,
       attachedSots: options.attachedSots,
       webSearch: options.webSearch,
+      ...(options.btw ? { btw: options.btw } : {}),
     }),
     signal: options.signal,
   });

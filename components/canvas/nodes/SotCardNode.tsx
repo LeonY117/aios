@@ -22,6 +22,8 @@ import NodeWindowControls from "./NodeWindowControls";
 import NodeSelectionBar from "./NodeSelectionBar";
 import MinimizedNodeView from "./MinimizedNodeView";
 import MaximizePortal from "./MaximizePortal";
+import BtwOverlay from "./BtwOverlay";
+import { useBtwSelection } from "@/lib/canvas/useBtwSelection";
 import type { NodeViewMode } from "@/types";
 
 const REHYPE_PLUGINS = [rehypeRaw];
@@ -77,6 +79,10 @@ function SotCardNode({
   const [linkCopied, setLinkCopied] = useState(false);
   const [contextCopied, setContextCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // BTW quick-ask
+  const btw = useBtwSelection(id);
+  const { containerRef: btwContainerRef, handleMouseUp: handleBtwMouseUp } = btw;
 
   const handleCopyContext = useCallback(() => {
     const fakeNode = { id, data } as Node<SotNodeData>;
@@ -218,7 +224,7 @@ function SotCardNode({
       />
     </div>
   ) : isRichText ? (
-    <div className="nodrag min-h-0 flex-1 overflow-hidden cursor-text flex flex-col">
+    <div ref={btwContainerRef} onMouseUp={handleBtwMouseUp} className="nodrag min-h-0 flex-1 overflow-hidden cursor-text flex flex-col">
       <RichTextEditor
         content={data.content}
         onChange={handleContentChange}
@@ -227,7 +233,7 @@ function SotCardNode({
       />
     </div>
   ) : (
-    <div className={`${selected ? "nowheel" : ""} min-h-0 flex-1 overflow-y-auto px-4 pb-3 cursor-text`}>
+    <div ref={btwContainerRef} onMouseUp={handleBtwMouseUp} className={`${selected ? "nowheel" : ""} min-h-0 flex-1 overflow-y-auto px-4 pb-3 cursor-text`}>
       <div className="mx-auto max-w-xl text-xs leading-relaxed text-fg-dim prose prose-xs">
         <ReactMarkdown rehypePlugins={REHYPE_PLUGINS}>{data.content}</ReactMarkdown>
       </div>
@@ -319,6 +325,8 @@ function SotCardNode({
           {contentSection}
         </MaximizePortal>
       )}
+
+      <BtwOverlay {...btw} />
     </>
   );
 }

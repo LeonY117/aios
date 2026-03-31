@@ -1,6 +1,6 @@
 import { streamText, type ModelMessage } from "ai";
 import { getModel, getToolsForModel, MODELS } from "@/lib/ai/models";
-import { buildSystemPrompt, type SotContext } from "@/lib/ai/system-prompt";
+import { buildSystemPrompt, buildBtwPrompt, type SotContext } from "@/lib/ai/system-prompt";
 
 export const maxDuration = 30;
 
@@ -24,11 +24,13 @@ export async function POST(req: Request) {
       modelId,
       attachedSots = [],
       webSearch = true,
+      btw,
     } = body as {
       messages: ModelMessage[];
       modelId: string;
       attachedSots?: SotContext[];
       webSearch?: boolean;
+      btw?: { selectedText: string };
     };
 
     const config = MODELS.find((m) => m.id === modelId);
@@ -37,7 +39,9 @@ export async function POST(req: Request) {
     }
 
     const model = getModel(modelId);
-    const system = buildSystemPrompt(attachedSots);
+    const system = btw
+      ? buildBtwPrompt(btw.selectedText)
+      : buildSystemPrompt(attachedSots);
     const tools = getToolsForModel(config, { webSearch });
 
     const result = streamText({

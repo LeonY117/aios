@@ -6,6 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { streamChat } from "@/lib/api/chat-client";
 import { DEFAULT_MODEL_ID } from "@/lib/ai/models-client";
+import { ChatIcon } from "@/components/icons";
 import type { ChatMessage } from "@/types";
 
 type BtwPanelProps = {
@@ -79,6 +80,9 @@ export default function BtwPanel({
     };
   }, [onClose]);
 
+  // Abort streaming if the panel unmounts
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
+
   // Block wheel so canvas doesn't zoom
   useEffect(() => {
     const el = panelRef.current;
@@ -107,15 +111,10 @@ export default function BtwPanel({
         {
           messages: currentMessages,
           modelId: modelId || DEFAULT_MODEL_ID,
-          attachedSots: [
-            {
-              title: "Selected excerpt",
-              content: selectedText,
-              sourceType: "manual",
-            },
-          ],
+          attachedSots: [],
           webSearch: false,
           signal: abortController.signal,
+          btw: { selectedText },
         },
         {
           onTextDelta: (fullContent) => {
@@ -172,9 +171,7 @@ export default function BtwPanel({
       {/* Header */}
       <div className="flex items-center justify-between px-3 pt-2.5 pb-2 border-b border-line-subtle shrink-0">
         <div className="flex items-center gap-1.5 text-fg-muted">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
+          <ChatIcon />
           <span className="text-xs font-semibold tracking-wide">btw</span>
         </div>
         <div className="flex items-center gap-1">
