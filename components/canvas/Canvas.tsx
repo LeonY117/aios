@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -27,6 +27,7 @@ import CenterConnectionLine from "./edges/CenterConnectionLine";
 import CanvasToolbar from "./CanvasToolbar";
 import GroupConnectorToolbar from "./GroupConnectorToolbar";
 import WorkspaceSidebar from "@/components/WorkspaceSidebar";
+import CommandPalette from "@/components/CommandPalette";
 import { useCanvasPaste } from "@/lib/hooks/useCanvasPaste";
 import { useSpacePan } from "@/lib/hooks/useSpacePan";
 import { usePersistence } from "@/lib/hooks/usePersistence";
@@ -69,6 +70,7 @@ const edgeTypes = {
 function CanvasInner({ workspace }: { workspace: string }) {
   const { theme } = useTheme();
   const router = useRouter();
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [nodes, setNodesRaw, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
@@ -265,6 +267,25 @@ function CanvasInner({ workspace }: { workspace: string }) {
     setNodes((nds) => selectAllSots(nds));
   }, [setNodes]);
 
+  const toggleCommandPalette = useCallback(() => {
+    setCommandPaletteOpen((o) => !o);
+  }, []);
+
+  const closeCommandPalette = useCallback(() => {
+    setCommandPaletteOpen(false);
+  }, []);
+
+  const triggerFileUpload = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".txt,.md,.pdf";
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (file) addFileNode(file);
+    };
+    input.click();
+  }, [addFileNode]);
+
   useKeyboardShortcuts(
     useMemo(
       () => ({
@@ -275,8 +296,9 @@ function CanvasInner({ workspace }: { workspace: string }) {
         doSave,
         flushDebouncedSave,
         selectAll,
+        toggleCommandPalette,
       }),
-      [addTextBlock, addLinkNode, addChatNode, addContextBlock, doSave, flushDebouncedSave, selectAll],
+      [addTextBlock, addLinkNode, addChatNode, addContextBlock, doSave, flushDebouncedSave, selectAll, toggleCommandPalette],
     ),
   );
 
@@ -335,6 +357,18 @@ function CanvasInner({ workspace }: { workspace: string }) {
         onCreated={handleCreated}
         onDeleted={handleDeleted}
         onRenamed={handleRenamed}
+      />
+      <CommandPalette
+        open={commandPaletteOpen}
+        onClose={closeCommandPalette}
+        currentSession={workspace}
+        onSwitchWorkspace={handleSwitch}
+        onCreateWorkspace={handleCreated}
+        onAddTextBlock={addTextBlock}
+        onAddChatNode={addChatNode}
+        onAddLinkNode={addLinkNode}
+        onAddContextBlock={addContextBlock}
+        onAddFile={triggerFileUpload}
       />
       {saveStatus !== "idle" && (
         <div className="absolute bottom-6 left-6 text-xs text-fg-muted select-none">

@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { SessionEntry } from "@/lib/persistence";
-import { useTheme, themeList } from "@/lib/themes";
-import { ChevronDownIcon } from "@/components/icons";
 
 type WorkspaceSidebarProps = {
   currentSession: string;
@@ -20,10 +18,8 @@ export default function WorkspaceSidebar({
   onDeleted,
   onRenamed,
 }: WorkspaceSidebarProps) {
-  const { themeId, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [sessions, setSessions] = useState<SessionEntry[]>([]);
-  const [themeOpen, setThemeOpen] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [newName, setNewName] = useState("");
   const [renamingSession, setRenamingSession] = useState<string | null>(null);
@@ -230,63 +226,6 @@ export default function WorkspaceSidebar({
               )}
             </div>
           ))}
-        </div>
-
-        {/* Theme picker */}
-        <div className="border-t border-line-subtle px-3 py-2">
-          <button
-            onClick={() => setThemeOpen(!themeOpen)}
-            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg transition-colors"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="5" />
-              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-            </svg>
-            Theme
-            <ChevronDownIcon className={`ml-auto transition-transform ${themeOpen ? "rotate-180" : ""}`} />
-          </button>
-          {themeOpen && (
-            <div className="mt-1 flex flex-col gap-0.5">
-              {/* System option */}
-              <button
-                onClick={() => setTheme("system")}
-                className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                  themeId === "system"
-                    ? "bg-accent-surface text-accent font-medium"
-                    : "text-fg-dim hover:bg-surface-alt"
-                }`}
-              >
-                <span className="flex gap-0.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-white border border-gray-300" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-gray-900 border border-gray-700" />
-                </span>
-                System
-              </button>
-              {themeList.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setTheme(t.id)}
-                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                    themeId === t.id
-                      ? "bg-accent-surface text-accent font-medium"
-                      : "text-fg-dim hover:bg-surface-alt"
-                  }`}
-                >
-                  <span className="flex gap-0.5">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full border border-black/10"
-                      style={{ backgroundColor: t.colors.canvas }}
-                    />
-                    <span
-                      className="w-2.5 h-2.5 rounded-full border border-black/10"
-                      style={{ backgroundColor: t.colors.accent }}
-                    />
-                  </span>
-                  {t.name}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* New workspace button */}
