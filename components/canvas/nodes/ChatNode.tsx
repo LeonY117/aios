@@ -154,6 +154,7 @@ import { updateNodeData, updateNode, removeEdgeBetween } from "@/lib/canvas/acti
 import { createChatWindowNode, appendNode } from "@/lib/nodes";
 import { CheckIcon, CopyIcon, LinkIcon, RefreshIcon, ChevronDownIcon } from "@/components/icons";
 import NodeWindowControls from "./NodeWindowControls";
+import NodeSelectionBar from "./NodeSelectionBar";
 import MinimizedNodeView from "./MinimizedNodeView";
 import MaximizePortal from "./MaximizePortal";
 import type { NodeViewMode } from "@/types";
@@ -931,18 +932,20 @@ function ChatNode({
           }}
         />
       )}
-      <div className={`chat-drop-content flex h-full flex-col rounded-lg border bg-surface shadow-sm transition-all duration-150 ${selected ? "border-selection ring-2 ring-selection/30" : "border-line hover:border-line-hover"}`}>
+      <div className={`chat-drop-content group flex h-full flex-col rounded-lg border bg-surface shadow-sm transition-all duration-150 ${selected ? "border-selection ring-2 ring-selection/30" : "border-line hover:border-line-hover"}`}>
         {viewMode === "minimized" ? (
           <MinimizedNodeView title={data.title} wordCount={wordCount} viewMode={viewMode} onViewModeChange={handleViewModeChange} />
         ) : (<>
         <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
-          <div className="h-[3px] w-6 rounded-full bg-handle" />
+          <div className={`h-[3px] w-6 rounded-full bg-handle transition-opacity duration-150 ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`} />
         </div>
 
         <div className="border-b border-line-subtle px-4 pb-2 min-w-0">
           <div className="flex items-start justify-between">
             <EditableTitle title={data.title} onChange={handleTitleChange} />
-            <NodeWindowControls viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+            <div className={`transition-opacity duration-150 ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+              <NodeWindowControls viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+            </div>
           </div>
           {!isInteractive && data.source && sourceBadgeColors[data.source] && (
             <span
@@ -1040,67 +1043,42 @@ function ChatNode({
           />
         )}
 
-        {/* Bottom bar */}
-        <div className="flex h-[26px] shrink-0 items-center gap-1 border-t border-line-subtle px-2">
-          {/* Imported chat: link + refresh buttons */}
-          {!isInteractive && data.sourceUrl && (
-            <>
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                title="Copy source link"
-                className="nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
-              >
-                {linkCopied ? (
-                  <CheckIcon />
-                ) : (
-                  <LinkIcon />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={handleRefresh}
-                title="Refresh content"
-                className={`nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer ${refreshing ? "animate-spin" : ""}`}
-              >
-                <RefreshIcon />
-              </button>
-            </>
-          )}
-
-          {/* Interactive: context summary */}
-          {isInteractive && attachedSots.length > 0 && (
-            <div className="flex items-center gap-1">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-fg-muted">
-                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-              </svg>
-              <span className="text-[10px] text-fg-muted">
-                {attachedSots.length} source{attachedSots.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-          )}
-          {isInteractive && attachedSots.length === 0 && (
-            <span className="text-[10px] text-fg-faint">No context attached</span>
-          )}
-
-          <div className="flex-1" />
-          <button
-            type="button"
-            onClick={handleCopyContext}
-            title="Copy as context"
-            className="nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
-          >
-            {contextCopied ? (
-              <CheckIcon />
-            ) : (
-              <CopyIcon />
-            )}
-          </button>
-        </div>
         </>}
         </>)}
 
       </div>
+
+      {/* Selection action bar */}
+      <NodeSelectionBar>
+        <button
+          type="button"
+          onClick={handleCopyContext}
+          title="Copy as context"
+          className="rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
+        >
+          {contextCopied ? <CheckIcon /> : <CopyIcon />}
+        </button>
+        {!isInteractive && data.sourceUrl && (
+          <>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              title="Copy source link"
+              className="rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
+            >
+              {linkCopied ? <CheckIcon /> : <LinkIcon />}
+            </button>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              title="Refresh content"
+              className={`rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer ${refreshing ? "animate-spin" : ""}`}
+            >
+              <RefreshIcon />
+            </button>
+          </>
+        )}
+      </NodeSelectionBar>
 
       {/* Maximized overlay */}
       {viewMode === "maximized" && (
@@ -1198,34 +1176,6 @@ function ChatNode({
             />
           )}
 
-          {/* Bottom bar */}
-          <div className="flex h-[26px] shrink-0 items-center gap-1 border-t border-line-subtle px-2">
-            {!isInteractive && data.sourceUrl && (
-              <>
-                <button type="button" onClick={handleCopyLink} title="Copy source link" className="rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer">
-                  {linkCopied ? <CheckIcon /> : <LinkIcon />}
-                </button>
-                <button type="button" onClick={handleRefresh} title="Refresh content" className={`rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer ${refreshing ? "animate-spin" : ""}`}>
-                  <RefreshIcon />
-                </button>
-              </>
-            )}
-            {isInteractive && attachedSots.length > 0 && (
-              <div className="flex items-center gap-1">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-fg-muted">
-                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                </svg>
-                <span className="text-[10px] text-fg-muted">{attachedSots.length} source{attachedSots.length !== 1 ? "s" : ""}</span>
-              </div>
-            )}
-            {isInteractive && attachedSots.length === 0 && (
-              <span className="text-[10px] text-fg-faint">No context attached</span>
-            )}
-            <div className="flex-1" />
-            <button type="button" onClick={handleCopyContext} title="Copy as context" className="rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer">
-              {contextCopied ? <CheckIcon /> : <CopyIcon />}
-            </button>
-          </div>
         </MaximizePortal>
       )}
 

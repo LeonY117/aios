@@ -19,6 +19,7 @@ import { copyWithFeedback } from "@/lib/canvas/clipboard";
 import { updateNodeData, updateNode } from "@/lib/canvas/actions";
 import { CheckIcon, CopyIcon, LinkIcon, RefreshIcon } from "@/components/icons";
 import NodeWindowControls from "./NodeWindowControls";
+import NodeSelectionBar from "./NodeSelectionBar";
 import MinimizedNodeView from "./MinimizedNodeView";
 import MaximizePortal from "./MaximizePortal";
 import type { NodeViewMode } from "@/types";
@@ -177,6 +178,8 @@ function SotCardNode({
 
   const isNote = data.sourceType === "manual" || data.sourceType === "file";
 
+  const hoverReveal = `transition-opacity duration-150 ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`;
+
   // --- Header ---
   const header = isNote ? (
     // Notes: centered grey title (no badge), controls absolutely positioned so they don't shift the title
@@ -184,7 +187,7 @@ function SotCardNode({
       <div className="text-center">
         <span className="text-[12px] font-semibold text-fg-faint truncate">{data.title}</span>
       </div>
-      <div className="absolute right-4 top-0">
+      <div className={`absolute right-4 top-0 ${hoverReveal}`}>
         <NodeWindowControls viewMode={viewMode} onViewModeChange={handleViewModeChange} />
       </div>
     </div>
@@ -193,48 +196,15 @@ function SotCardNode({
     <div className="px-4 pb-2">
       <div className="flex items-start justify-between">
         <EditableTitle title={data.title} onChange={handleTitleChange} />
-        <NodeWindowControls viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+        <div className={hoverReveal}>
+          <NodeWindowControls viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+        </div>
       </div>
       <span
         className={`mt-1 inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${sourceBadgeColors[data.sourceType]}`}
       >
         {data.sourceType}
       </span>
-    </div>
-  );
-
-  // --- Bottom bar (shared for non-rich-text) ---
-  const bottomBar = (
-    <div className="flex h-[26px] shrink-0 items-center gap-1 border-t border-line-subtle px-2">
-      {data.sourceUrl && (
-        <>
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            title="Copy source link"
-            className="nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
-          >
-            {linkCopied ? <CheckIcon /> : <LinkIcon />}
-          </button>
-          <button
-            type="button"
-            onClick={handleRefresh}
-            title="Refresh content"
-            className={`nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer ${refreshing ? "animate-spin" : ""}`}
-          >
-            <RefreshIcon />
-          </button>
-        </>
-      )}
-      <div className="flex-1" />
-      <button
-        type="button"
-        onClick={handleCopyContext}
-        title="Copy as context"
-        className="nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
-      >
-        {contextCopied ? <CheckIcon /> : <CopyIcon />}
-      </button>
     </div>
   );
 
@@ -254,27 +224,14 @@ function SotCardNode({
         onChange={handleContentChange}
         autoFocus={!!data.isEditing}
         selected={selected}
-        renderActions={() => (
-          <button
-            type="button"
-            onClick={handleCopyContext}
-            title="Copy as context"
-            className="nodrag rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
-          >
-            {contextCopied ? <CheckIcon /> : <CopyIcon />}
-          </button>
-        )}
       />
     </div>
   ) : (
-    <>
-      <div className={`${selected ? "nowheel" : ""} min-h-0 flex-1 overflow-y-auto px-4 pb-3 cursor-text`}>
-        <div className="mx-auto max-w-xl text-xs leading-relaxed text-fg-dim prose prose-xs">
-          <ReactMarkdown rehypePlugins={REHYPE_PLUGINS}>{data.content}</ReactMarkdown>
-        </div>
+    <div className={`${selected ? "nowheel" : ""} min-h-0 flex-1 overflow-y-auto px-4 pb-3 cursor-text`}>
+      <div className="mx-auto max-w-xl text-xs leading-relaxed text-fg-dim prose prose-xs">
+        <ReactMarkdown rehypePlugins={REHYPE_PLUGINS}>{data.content}</ReactMarkdown>
       </div>
-      {bottomBar}
-    </>
+    </div>
   );
 
   return (
@@ -287,19 +244,51 @@ function SotCardNode({
         handleClassName="!w-3 !h-3 !bg-transparent !border-0"
       />
       {viewMode !== "minimized" && <ConnectorHandle type="source" />}
-      <div className={`flex h-full flex-col rounded-lg border bg-surface shadow-sm transition-all duration-150 ${selected ? "border-selection ring-2 ring-selection/30" : "border-line hover:border-line-hover"}`}>
+      <div className={`group flex h-full flex-col rounded-lg border bg-surface shadow-sm transition-all duration-150 ${selected ? "border-selection ring-2 ring-selection/30" : "border-line hover:border-line-hover"}`}>
         {viewMode === "minimized" ? (
           <MinimizedNodeView title={data.title} wordCount={wordCount} viewMode={viewMode} onViewModeChange={handleViewModeChange} />
         ) : (
           <>
             <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
-              <div className="h-[3px] w-6 rounded-full bg-handle" />
+              <div className={`h-[3px] w-6 rounded-full bg-handle ${hoverReveal}`} />
             </div>
             {header}
             {viewMode !== "maximized" && contentSection}
           </>
         )}
       </div>
+
+      {/* Selection action bar */}
+      <NodeSelectionBar>
+        <button
+          type="button"
+          onClick={handleCopyContext}
+          title="Copy as context"
+          className="rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
+        >
+          {contextCopied ? <CheckIcon /> : <CopyIcon />}
+        </button>
+        {data.sourceUrl && (
+          <>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              title="Copy source link"
+              className="rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer"
+            >
+              {linkCopied ? <CheckIcon /> : <LinkIcon />}
+            </button>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              title="Refresh content"
+              className={`rounded p-1 text-fg-muted hover:text-fg-dim transition-colors cursor-pointer ${refreshing ? "animate-spin" : ""}`}
+            >
+              <RefreshIcon />
+            </button>
+          </>
+        )}
+      </NodeSelectionBar>
 
       {/* Maximized overlay */}
       {viewMode === "maximized" && (

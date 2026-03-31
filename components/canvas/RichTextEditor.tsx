@@ -168,7 +168,6 @@ type RichTextEditorProps = {
   onChange: (html: string) => void;
   autoFocus?: boolean;
   selected?: boolean;
-  renderActions?: () => React.ReactNode;
 };
 
 /* ── Main editor ── */
@@ -178,7 +177,6 @@ export default function RichTextEditor({
   onChange,
   autoFocus = false,
   selected = false,
-  renderActions,
 }: RichTextEditorProps) {
   const onChangeRef = useRef(onChange);
   useEffect(() => {
@@ -232,14 +230,6 @@ export default function RichTextEditor({
           <EditorContent editor={editor} />
         </div>
       </div>
-
-      {/* Bottom bar */}
-      {renderActions && (
-        <div className="flex h-[26px] shrink-0 items-center border-t border-line-subtle px-2">
-          <div className="flex-1" />
-          {renderActions()}
-        </div>
-      )}
     </div>
   );
 }

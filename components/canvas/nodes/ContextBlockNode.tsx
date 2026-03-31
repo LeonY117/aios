@@ -33,6 +33,7 @@ import { shallowArrayEqual } from "@/lib/canvas/shallow-equal";
 import { copyWithFeedback } from "@/lib/canvas/clipboard";
 import { updateNodeData, updateNode } from "@/lib/canvas/actions";
 import NodeWindowControls from "./NodeWindowControls";
+import NodeSelectionBar from "./NodeSelectionBar";
 import MinimizedNodeView from "./MinimizedNodeView";
 import MaximizePortal from "./MaximizePortal";
 import type { NodeViewMode } from "@/types";
@@ -123,20 +124,15 @@ function ContextBlockNode({
   );
 
   const footer = (
-    <div className="mt-3 flex items-center justify-between px-4 pb-4">
+    <div className="mt-3 px-4 pb-4">
       <span className="text-[10px] text-fg-muted">
         {sotNodes.length} source{sotNodes.length !== 1 ? "s" : ""}
         {tokenCount > 0 && ` · ~${tokenCount.toLocaleString()} tokens`}
       </span>
-      <button
-        onClick={handleCopy}
-        disabled={sotNodes.length === 0}
-        className="nodrag rounded px-3 py-1.5 text-xs font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-      >
-        {copied ? "Copied!" : "Copy Context"}
-      </button>
     </div>
   );
+
+  const hoverReveal = `transition-opacity duration-150 ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`;
 
   return (
     <>
@@ -159,13 +155,13 @@ function ContextBlockNode({
           pointerEvents: isConnecting ? "all" : "none",
         }}
       />
-      <div className={`context-drop-content flex h-full flex-col rounded-lg border-2 border-dashed bg-accent-surface shadow-sm transition-all duration-150 ${selected ? "border-selection ring-2 ring-selection/30" : "border-accent-line hover:border-accent"}`}>
+      <div className={`context-drop-content group flex h-full flex-col rounded-lg border-2 border-dashed bg-accent-surface shadow-sm transition-all duration-150 ${selected ? "border-selection ring-2 ring-selection/30" : "border-accent-line hover:border-accent"}`}>
         {viewMode === "minimized" ? (
           <MinimizedNodeView title={data.title} wordCount={wordCount} viewMode={viewMode} onViewModeChange={handleViewModeChange} />
         ) : (
           <>
             <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
-              <div className="h-[3px] w-6 rounded-full bg-accent-handle" />
+              <div className={`h-[3px] w-6 rounded-full bg-accent-handle ${hoverReveal}`} />
             </div>
 
             {/* Header */}
@@ -176,7 +172,9 @@ function ContextBlockNode({
                   onChange={handleTitleChange}
                   className="text-sm font-semibold text-on-accent"
                 />
-                <NodeWindowControls viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+                <div className={hoverReveal}>
+                  <NodeWindowControls viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+                </div>
               </div>
               <span className="mt-1 inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-accent-surface text-accent">
                 context
@@ -194,6 +192,17 @@ function ContextBlockNode({
           </>
         )}
       </div>
+
+      {/* Selection action bar */}
+      <NodeSelectionBar>
+        <button
+          onClick={handleCopy}
+          disabled={sotNodes.length === 0}
+          className="nodrag rounded px-2.5 py-1 text-[11px] font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          {copied ? "Copied!" : "Copy Context"}
+        </button>
+      </NodeSelectionBar>
 
       {/* Maximized overlay */}
       {viewMode === "maximized" && (
