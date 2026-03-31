@@ -22,10 +22,8 @@ export default function WorkspaceSidebar({
   onRenamed,
   onArchived,
 }: WorkspaceSidebarProps) {
-  const { themeId, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [sessions, setSessions] = useState<SessionEntry[]>([]);
-  const [themeOpen, setThemeOpen] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [newName, setNewName] = useState("");
   const [renamingSession, setRenamingSession] = useState<string | null>(null);

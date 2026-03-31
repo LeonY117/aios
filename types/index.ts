@@ -18,6 +18,10 @@ export type ChatSourceResult = SourceResult & {
   model?: string;
 };
 
+// --- View mode ---
+
+export type NodeViewMode = "normal" | "minimized" | "maximized";
+
 // --- Node data types ---
 
 export type SotNodeData = {
@@ -29,6 +33,7 @@ export type SotNodeData = {
   isLoading?: boolean;
   isRichText?: boolean;
   isEditing?: boolean;
+  viewMode?: NodeViewMode;
 };
 
 export type ChatSource = {
@@ -62,8 +67,10 @@ export type ChatNodeData = {
   isStreaming?: boolean;
   webSearch?: boolean;
   attachedSots?: AttachedSot[];
+  viewMode?: NodeViewMode;
 };
 
 export type ContextBlockData = {
   title: string;
+  viewMode?: NodeViewMode;
 };

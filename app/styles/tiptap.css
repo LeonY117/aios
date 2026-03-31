@@ -24,62 +24,73 @@
   margin: 0.5em 0;
 }
 
-/* Task list (todos) */
-.tiptap ul[data-type="taskList"] {
-  list-style: none !important;
-  padding-left: 0 !important;
-}
-
-/* Nested task lists need indentation (top-level is 0 above) */
-.tiptap ul[data-type="taskList"] ul[data-type="taskList"] {
-  padding-left: 1.25em !important;
-}
-
-.tiptap ul[data-type="taskList"] li::before,
-.tiptap ul[data-type="taskList"] li::marker {
+/* Task list items — use direct child (> li) so nested bullet/ordered
+   list items inside a task item are NOT affected by these rules.
+   Padding lives on the <ul> (same as bullet/ordered) so text alignment
+   is consistent across all list types. The checkbox is positioned in the
+   <ul>'s padding area via negative left offset on the label. */
+.tiptap ul[data-type="taskList"] > li::before,
+.tiptap ul[data-type="taskList"] > li::marker {
   content: none !important;
   display: none !important;
 }
 
-.tiptap ul[data-type="taskList"] li {
+.tiptap ul[data-type="taskList"] > li {
   position: relative;
-  padding-left: 1.25em !important;
+  padding-left: 0 !important;
 }
 
-.tiptap ul[data-type="taskList"] li > label {
+.tiptap ul[data-type="taskList"] > li > label {
   position: absolute;
-  left: 0;
+  left: -1.25em;
   top: 0;
-  height: 1.5em;
+  width: 1.25em;
+  height: 1lh;
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
-.tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
+.tiptap ul[data-type="taskList"] > li > label input[type="checkbox"] {
   cursor: pointer;
   accent-color: var(--accent);
+  font-size: inherit;
+  width: 0.9em;
+  height: 0.9em;
 }
 
-.tiptap ul[data-type="taskList"] li > div {
+.tiptap ul[data-type="taskList"] > li > div {
   min-width: 0;
 }
 
-.tiptap ul[data-type="taskList"] li[data-checked="true"] > div > p {
+.tiptap ul[data-type="taskList"] > li[data-checked="true"] > div > p {
   text-decoration: line-through;
   color: var(--fg-muted);
 }
 
-/* Normalize prose spacing on lists so they align with normal text */
+/* ── Normalize all list types to consistent spacing ── */
 .tiptap ul,
-.tiptap ol,
-.tiptap ul[data-type="taskList"] {
+.tiptap ol {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
   padding-left: 1.25em !important;
+  list-style-position: outside !important;
 }
 
+/* Force consistent markers regardless of nesting depth (prose changes them) */
+.tiptap ul:not([data-type="taskList"]) {
+  list-style-type: disc !important;
+}
+
+.tiptap ol {
+  list-style-type: decimal !important;
+}
+
+/* Task lists: no native markers (checkbox is custom-positioned) */
 .tiptap ul[data-type="taskList"] {
-  padding-left: 0 !important;
+  list-style: none !important;
+  /* padding-left: 1.25em inherited from the general ul/ol rule —
+     same as bullet & ordered lists for consistent text alignment */
 }
 
 .tiptap li {

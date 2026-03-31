@@ -37,3 +37,4 @@ A per-project infinite canvas where:
 
 Use project `tmp/` for temporary files, DO NOT use system tmp folder `/tmp`.
 Use `local/` for manual test files and ad-hoc experiments.
+Use `prototype/` for UI prototypes — see `prototype/CLAUDE.md` for the full workflow.

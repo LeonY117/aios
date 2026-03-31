@@ -1,6 +1,7 @@
 import { streamText, type ModelMessage } from "ai";
 import { getModel, getToolsForModel, MODELS } from "@/lib/ai/models";
-import { buildSystemPrompt, type SotContext } from "@/lib/ai/system-prompt";
+import { buildSystemPrompt, buildBtwPrompt, type SotContext } from "@/lib/ai/system-prompt";
+import { withSystemCacheBreakpoint, withHistoryCacheBreakpoint } from "@/lib/ai/prompt-cache";
 
 export const maxDuration = 30;
 
@@ -24,11 +25,13 @@ export async function POST(req: Request) {
       modelId,
       attachedSots = [],
       webSearch = true,
+      btw,
     } = body as {
       messages: ModelMessage[];
       modelId: string;
       attachedSots?: SotContext[];
       webSearch?: boolean;
+      btw?: { selectedText: string };
     };
 
     const config = MODELS.find((m) => m.id === modelId);
@@ -37,16 +40,28 @@ export async function POST(req: Request) {
     }
 
     const model = getModel(modelId);
-    const system = buildSystemPrompt(attachedSots);
+    const rawSystem = btw
+      ? buildBtwPrompt(btw.selectedText)
+      : buildSystemPrompt(attachedSots);
+    const system = withSystemCacheBreakpoint(rawSystem, config.provider);
+    const cachedMessages = withHistoryCacheBreakpoint(messages, config.provider);
     const tools = getToolsForModel(config, { webSearch });
 
     const result = streamText({
       model,
       system,
-      messages,
+      messages: cachedMessages,
       tools,
       onError({ error }) {
         console.error("[chat/route] streamText error:", error);
+      },
+      onFinish({ usage }) {
+        const d = usage.inputTokenDetails;
+        if (d?.cacheReadTokens || d?.cacheWriteTokens) {
+          console.log(
+            `[chat/cache] model=${modelId} read=${d.cacheReadTokens ?? 0} write=${d.cacheWriteTokens ?? 0} uncached=${d.noCacheTokens ?? 0}`,
+          );
+        }
       },
     });
 

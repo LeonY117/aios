@@ -23,6 +23,22 @@ export type SotContext = {
   sourceType: string;
 };
 
+// ---------------------------------------------------------------------------
+// BTW quick-ask prompt — optimised for the mini-panel UX
+// Draws from proven patterns: Apple Intelligence (hard length cap),
+// Perplexity (ban filler/hedging), Cursor (lean prompt, no repetition).
+// ---------------------------------------------------------------------------
+
+const BTW_PROMPT = `You are a concise Q&A assistant. The user selected text and is asking a quick question about it.
+
+Rules:
+- Answer in 1–3 sentences unless the user explicitly asks for more.
+- Be direct. No preamble, no hedging, no filler ("Great question!", "It's worth noting…").
+- Do not repeat or paraphrase the selected text back.
+- Do not apologize or add caveats.
+- If you don't know, say so plainly.
+- Use markdown sparingly — backticks for code, no headers. Use a list only when genuinely needed.`;
+
 /**
  * Build the full system prompt with attached SOT context injected.
  */
@@ -47,4 +63,16 @@ ${contextBlocks}
 </attached_context>
 
 Use this context to inform your responses. Reference sources by their title when applicable.`;
+}
+
+/**
+ * Build the system prompt for BTW quick-ask panels.
+ * The selected excerpt is injected as a single context block.
+ */
+export function buildBtwPrompt(selectedText: string): string {
+  return `${BTW_PROMPT}
+
+<selected_text>
+${selectedText}
+</selected_text>`;
 }

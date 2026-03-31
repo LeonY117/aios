@@ -46,6 +46,8 @@ function stripContent(node: Node): Node {
   delete data.messages;
   delete data.isLoading;
   delete data.isStreaming;
+  // Don't persist "maximized" — restore to normal on reload
+  if (data.viewMode === "maximized") data.viewMode = "normal";
   return { ...node, data };
 }
 

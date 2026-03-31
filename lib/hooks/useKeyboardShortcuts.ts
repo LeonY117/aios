@@ -10,6 +10,7 @@ type ShortcutActions = {
   doSave: () => void;
   flushDebouncedSave: () => void;
   selectAll: () => void;
+  toggleCommandPalette: () => void;
 };
 
 /**
@@ -55,6 +56,13 @@ export function useKeyboardShortcuts(actions: ShortcutActions) {
       }
 
       if (!e.metaKey && !e.ctrlKey) return;
+
+      // Cmd+K — command palette
+      if (e.key === "k") {
+        e.preventDefault();
+        actions.toggleCommandPalette();
+        return;
+      }
 
       // Cmd+S — save
       if (e.key === "s") {
