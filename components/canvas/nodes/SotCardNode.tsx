@@ -29,10 +29,18 @@ import type { NodeViewMode } from "@/types";
 const REHYPE_PLUGINS = [rehypeRaw];
 
 /** Extract plain text of the first block element from HTML. */
-function extractFirstLine(html: string): string {
-  const match = html.match(/<(?:h[1-6]|p|li)[^>]*>(.*?)<\/(?:h[1-6]|p|li)>/);
-  if (!match) return "";
-  return match[1].replace(/<[^>]*>/g, "").trim();
+function extractFirstLine(content: string): string {
+  // Handle markdown content: take first non-empty line, strip markdown syntax
+  const firstLine = content.split("\n").find((line) => line.trim().length > 0);
+  if (!firstLine) return "";
+  return firstLine
+    .replace(/^#{1,6}\s+/, "") // headings
+    .replace(/\*\*|__/g, "") // bold
+    .replace(/\*|_/g, "") // italic
+    .replace(/~~|~~/g, "") // strikethrough
+    .replace(/\+\+/g, "") // underline
+    .replace(/<[^>]*>/g, "") // any remaining HTML
+    .trim();
 }
 
 const sourceBadgeColors: Record<SotNodeData["sourceType"], string> = {
@@ -117,13 +125,13 @@ function SotCardNode({
   }, [id, data.sourceUrl, data.sourceType, refreshing, setNodes]);
 
   const handleContentChange = useCallback(
-    (html: string) => {
+    (markdown: string) => {
       setNodes((nds) => {
         const node = nds.find((n) => n.id === id);
         const d = node?.data as SotNodeData | undefined;
-        const updates: Partial<SotNodeData> = { content: html };
+        const updates: Partial<SotNodeData> = { content: markdown };
         if (d?.sourceType === "manual") {
-          updates.title = extractFirstLine(html) || "Untitled";
+          updates.title = extractFirstLine(markdown) || "Untitled";
         }
         return updateNodeData<SotNodeData>(nds, id, updates);
       });
@@ -161,8 +169,10 @@ function SotCardNode({
 
   const wordCount = useMemo(() => {
     if (!data.content) return 0;
-    // Strip HTML tags, then count words
-    const text = data.content.replace(/<[^>]*>/g, " ");
+    // Strip markdown syntax and any remaining HTML tags, then count words
+    const text = data.content
+      .replace(/<[^>]*>/g, " ")
+      .replace(/[#*_~`\[\]()>+|\\-]/g, " ");
     return text.split(/\s+/).filter(Boolean).length;
   }, [data.content]);
 

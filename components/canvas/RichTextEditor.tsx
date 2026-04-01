@@ -5,13 +5,18 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
 import TaskList from "@tiptap/extension-task-list";
+import { Markdown } from "@tiptap/markdown";
 import { useEffect, useRef } from "react";
 import { clearPendingEditorFocus } from "@/lib/editor-focus-signal";
 import { CustomTaskItem, ListBehaviorFix } from "./list-extensions";
 
+// TODO(2026-07-01): Remove this once all users have opened their sessions at least once.
+// After that date, all content files will have been auto-converted to markdown on first edit.
+const IS_HTML = /^<(?:p|h[1-6]|ul|ol|li|blockquote|pre|div)\b/i;
+
 type RichTextEditorProps = {
   content: string;
-  onChange: (html: string) => void;
+  onChange: (markdown: string) => void;
   autoFocus?: boolean;
   selected?: boolean;
 };
@@ -38,11 +43,13 @@ export default function RichTextEditor({
       CustomTaskItem.configure({ nested: true }),
       ListBehaviorFix,
       Placeholder.configure({ placeholder: "Start writing..." }),
+      Markdown,
     ],
     content,
+    contentType: IS_HTML.test(content.trim()) ? "html" : "markdown",
     autofocus: autoFocus ? "end" : false,
     onUpdate: ({ editor: e }) => {
-      onChangeRef.current(e.getHTML());
+      onChangeRef.current(e.getMarkdown());
     },
     editorProps: {
       attributes: {
