@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
-import { SESSIONS_DIR, sessionPath } from "@/lib/session-path";
+import { SESSIONS_DIR, sessionPath, isInvalidSessionName } from "@/lib/session-path";
 
 const EMPTY_SESSION = { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } };
 
 export async function GET(request: NextRequest) {
   const name = request.nextUrl.searchParams.get("name") ?? "default";
+  if (isInvalidSessionName(name)) {
+    return NextResponse.json({ error: "Invalid name" }, { status: 400 });
+  }
   const filePath = sessionPath(name);
 
   try {
@@ -19,6 +22,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const name = request.nextUrl.searchParams.get("name") ?? "default";
+  if (isInvalidSessionName(name)) {
+    return NextResponse.json({ error: "Invalid name" }, { status: 400 });
+  }
   const isCreate = request.nextUrl.searchParams.get("create") === "true";
   const filePath = sessionPath(name);
   const body = await request.json();
@@ -58,6 +64,9 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   const name = request.nextUrl.searchParams.get("name") ?? "default";
+  if (isInvalidSessionName(name)) {
+    return NextResponse.json({ error: "Invalid name" }, { status: 400 });
+  }
   const sessionDir = path.join(SESSIONS_DIR, name);
 
   try {
