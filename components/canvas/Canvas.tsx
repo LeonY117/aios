@@ -163,9 +163,13 @@ function CanvasInner({ workspace }: { workspace: string }) {
 
   const handleArchived = useCallback(
     async (name: string, archived: boolean) => {
-      await archiveSession(name, archived);
-      if (archived && name === workspace) {
-        router.push("/");
+      try {
+        await archiveSession(name, archived);
+        if (archived && name === workspace) {
+          router.push("/");
+        }
+      } catch {
+        // archiveSession throws on failure — sidebar will re-fetch on next open
       }
     },
     [workspace, router],

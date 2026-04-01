@@ -1,9 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { SessionEntry } from "@/lib/persistence";
-import { useTheme, themeList } from "@/lib/themes";
-import { ChevronDownIcon } from "@/components/icons";
+import {
+  ChevronDownIcon,
+  RenameIcon,
+  ArchiveBoxIcon,
+  DeleteIcon,
+  CurvedArrowIcon,
+  MoreDotsIcon,
+} from "@/components/icons";
+import { useClickOutside } from "@/lib/hooks/useClickOutside";
 
 type WorkspaceSidebarProps = {
   currentSession: string;
@@ -13,6 +20,27 @@ type WorkspaceSidebarProps = {
   onRenamed: (oldName: string, newName: string) => void;
   onArchived: (name: string, archived: boolean) => void;
 };
+
+// ── Recency bucketing ────────────────────────────────────────
+
+function makeRecencyBucketer() {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfYesterday = new Date(startOfToday.getTime() - 86400000);
+  const startOfWeek = new Date(startOfToday.getTime() - 6 * 86400000);
+  const startOf30Days = new Date(startOfToday.getTime() - 29 * 86400000);
+
+  return (iso: string): string => {
+    const d = new Date(iso);
+    if (d >= startOfToday) return "Today";
+    if (d >= startOfYesterday) return "Yesterday";
+    if (d >= startOfWeek) return "Past Week";
+    if (d >= startOf30Days) return "Past 30 Days";
+    return "Older";
+  };
+}
+
+const SECTION_ORDER = ["Today", "Yesterday", "Past Week", "Past 30 Days", "Older"];
 
 export default function WorkspaceSidebar({
   currentSession,
@@ -30,24 +58,25 @@ export default function WorkspaceSidebar({
   const [renameValue, setRenameValue] = useState("");
   const [deletingSession, setDeletingSession] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const newInputRef = useRef<HTMLInputElement>(null);
+  const archivedRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   const fetchSessions = useCallback(async () => {
-    const res = await fetch("/api/session/list");
+    const res = await fetch("/api/session/list", { cache: "no-store" });
     const { sessions: list }: { sessions: SessionEntry[] } = await res.json();
     setSessions(list);
   }, []);
 
   useEffect(() => {
-    // Re-fetch session list each time sidebar opens so sort order is fresh
     if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchSessions();
     }
   }, [open, currentSession, fetchSessions]);
-
-  // Sidebar toggle — avoid Cmd+B as it conflicts with bold in text editor
 
   // Focus inputs when shown
   useEffect(() => {
@@ -57,9 +86,32 @@ export default function WorkspaceSidebar({
     if (showNewDialog) newInputRef.current?.focus();
   }, [showNewDialog]);
 
-  const sessionNames = sessions.map((s) => s.name);
-  const activeSessions = sessions.filter((s) => !s.archived);
-  const archivedSessions = sessions.filter((s) => s.archived);
+  const closeArchived = useCallback(() => setShowArchived(false), []);
+  const closeMenu = useCallback(() => setMenuOpenFor(null), []);
+  const closeSidebar = useCallback(() => setOpen(false), []);
+
+  useClickOutside(archivedRef, closeArchived, showArchived);
+  useClickOutside(menuRef, closeMenu, !!menuOpenFor);
+  useClickOutside(sidebarRef, closeSidebar, open && !deletingSession && !showNewDialog);
+
+  const sessionNames = useMemo(() => sessions.map((s) => s.name), [sessions]);
+  const activeSessions = useMemo(() => sessions.filter((s) => !s.archived), [sessions]);
+  const archivedSessions = useMemo(() => sessions.filter((s) => s.archived), [sessions]);
+
+  // Group active sessions by recency
+  const groupedSessions = useMemo(() => {
+    const bucket = makeRecencyBucketer();
+    const groups = new Map<string, SessionEntry[]>();
+    for (const s of activeSessions) {
+      const key = bucket(s.updatedAt);
+      const list = groups.get(key) ?? [];
+      list.push(s);
+      groups.set(key, list);
+    }
+    return SECTION_ORDER
+      .filter((key) => groups.has(key))
+      .map((key) => ({ label: key, sessions: groups.get(key)! }));
+  }, [activeSessions]);
 
   const isInvalidName = (name: string) =>
     !name || name === "." || name === ".." || name.includes("/");
@@ -70,13 +122,14 @@ export default function WorkspaceSidebar({
     setShowNewDialog(false);
     setNewName("");
     onCreated(name);
-    // Newest first — prepend
     const now = new Date().toISOString();
     setSessions((s) => [{ name, createdAt: now, updatedAt: now, archived: false }, ...s]);
   };
 
   const handleDelete = (name: string) => {
-    if (activeSessions.length <= 1 && !sessions.find((s) => s.name === name)?.archived) return;
+    const isArchived = sessions.find((s) => s.name === name)?.archived;
+    if (!isArchived && activeSessions.length <= 1) return;
+    setMenuOpenFor(null);
     setDeletingSession(name);
   };
 
@@ -101,6 +154,7 @@ export default function WorkspaceSidebar({
   };
 
   const handleArchive = (name: string) => {
+    setMenuOpenFor(null);
     onArchived(name, true);
     setSessions((s) =>
       s.map((e) => (e.name === name ? { ...e, archived: true } : e)),
@@ -136,13 +190,10 @@ export default function WorkspaceSidebar({
     );
   }
 
-  const renderSessionItem = (
-    { name, archived }: SessionEntry,
-    isArchived: boolean,
-  ) => (
+  const renderSessionItem = ({ name, archived: isArchived }: SessionEntry) => (
     <div
       key={name}
-      className={`group flex items-center gap-1 px-3 py-1.5 cursor-pointer text-sm transition-colors ${
+      className={`group flex items-center h-8 px-3 !cursor-pointer text-sm transition-colors ${
         name === currentSession
           ? "bg-accent-surface text-accent font-medium"
           : "text-fg-dim hover:bg-surface-alt"
@@ -170,98 +221,73 @@ export default function WorkspaceSidebar({
           >
             {name}
           </button>
-          <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-            {!isArchived && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setRenamingSession(name);
-                  setRenameValue(name);
-                }}
-                className="rounded p-0.5 text-fg-muted hover:text-fg-dim hover:bg-hover"
-                title="Rename"
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M8.5 1.5l2 2M1 11l.5-2L8.5 2l2 2-7 7-2 .5z" />
-                </svg>
-              </button>
-            )}
-            {isArchived ? (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleUnarchive(name);
-                }}
-                className="rounded p-0.5 text-fg-muted hover:text-fg-dim hover:bg-hover"
-                title="Unarchive"
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M1 3h10M2 3v7h8V3M4.5 5.5l1.5-1.5 1.5 1.5M6 4v4" />
-                </svg>
-              </button>
-            ) : (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleArchive(name);
-                }}
-                className="rounded p-0.5 text-fg-muted hover:text-fg-dim hover:bg-hover"
-                title="Archive"
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M1 3h10M2 3v7h8V3M4.5 6.5l1.5 1.5 1.5-1.5M6 8V4" />
-                </svg>
-              </button>
-            )}
+          {isArchived ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleDelete(name);
+                handleUnarchive(name);
               }}
-              className="rounded p-0.5 text-fg-muted hover:text-red-500 hover:bg-red-50"
-              title="Delete"
+              className="flex items-center justify-center w-6 h-6 rounded-[5px] text-fg-faint hover:text-accent hover:bg-surface-alt transition-colors invisible group-hover:visible"
+              title="Restore"
             >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M2 3h8M4.5 3V2h3v1M3 3v7.5h6V3M5 5.5v3M7 5.5v3" />
-              </svg>
+              <CurvedArrowIcon />
             </button>
-          </div>
+          ) : (
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpenFor(menuOpenFor === name ? null : name);
+                }}
+                className={`flex items-center justify-center w-6 h-6 rounded-[5px] text-fg-muted hover:text-fg-dim hover:bg-hover transition-colors ${
+                  menuOpenFor === name ? "visible" : "invisible group-hover:visible"
+                }`}
+                title="More"
+              >
+                <MoreDotsIcon />
+              </button>
+              {menuOpenFor === name && (
+                <div
+                  ref={menuRef}
+                  className="absolute top-full right-0 w-[148px] bg-surface border border-line rounded-lg shadow-lg p-1 z-10"
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpenFor(null);
+                      setRenamingSession(name);
+                      setRenameValue(name);
+                    }}
+                    className="flex items-center gap-2 w-full px-2 py-1.5 rounded-[5px] text-sm text-fg-dim hover:bg-hover transition-colors"
+                  >
+                    <RenameIcon />
+                    Rename
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleArchive(name);
+                    }}
+                    className="flex items-center gap-2 w-full px-2 py-1.5 rounded-[5px] text-sm text-fg-dim hover:bg-hover transition-colors"
+                  >
+                    <ArchiveBoxIcon />
+                    Archive
+                  </button>
+                  <div className="h-px bg-line-subtle my-1 mx-1" />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(name);
+                    }}
+                    className="flex items-center gap-2 w-full px-2 py-1.5 rounded-[5px] text-sm text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <DeleteIcon />
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>
@@ -269,125 +295,71 @@ export default function WorkspaceSidebar({
 
   return (
     <>
-      <div className="absolute top-0 left-0 z-50 flex h-full w-52 flex-col border-r border-line bg-surface/95 backdrop-blur-sm shadow-lg">
+      <div ref={sidebarRef} className="absolute top-0 left-0 z-50 flex h-full w-52 flex-col border-r border-line bg-surface/95 backdrop-blur-sm shadow-lg !cursor-default [&_button]:!cursor-pointer">
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-3 border-b border-line-subtle">
-          <span className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
+          <span className="text-sm text-fg-muted">
             Workspaces
           </span>
           <button
             onClick={() => setOpen(false)}
-            className="text-fg-muted hover:text-fg-dim transition-colors"
+            className="flex items-center justify-center w-6 h-6 rounded-[5px] text-fg-muted hover:text-fg-dim hover:bg-hover transition-colors"
             title="Close (Cmd+B)"
           >
             <svg
               width="14"
               height="14"
-              viewBox="0 0 14 14"
+              viewBox="0 0 16 16"
               fill="none"
               stroke="currentColor"
-              strokeWidth="1.5"
+              strokeWidth="1.25"
               strokeLinecap="round"
             >
-              <path d="M10 4L4 10M4 4l6 6" />
+              <path d="M12 4L4 12M4 4l8 8" />
             </svg>
           </button>
         </div>
 
-        {/* New workspace button */}
-        <div className="border-b border-line-subtle px-3 py-2">
-          <button
-            onClick={() => setShowNewDialog(true)}
-            className="w-full rounded-md px-2 py-1.5 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg transition-colors"
-          >
-            + New workspace
-          </button>
-        </div>
+        {/* New workspace */}
+        <button
+          onClick={() => setShowNewDialog(true)}
+          className="flex items-center gap-1.5 px-3 py-2 text-sm text-fg-muted hover:text-fg-dim hover:bg-surface-alt transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <path d="M7 2v10M2 7h10" />
+          </svg>
+          New workspace
+        </button>
 
-        {/* Active session list */}
-        <div className="flex-1 overflow-y-auto py-1">
-          {activeSessions.map((session) => renderSessionItem(session, false))}
+        {/* Active sessions grouped by recency */}
+        <div className="flex-1 overflow-y-auto">
+          {groupedSessions.map(({ label, sessions: group }, gi) => (
+            <div key={label} className={gi > 0 ? "mt-1 border-t border-line-subtle" : ""}>
+              <div className="text-[11px] uppercase tracking-wider text-fg-faint px-3 pt-2 pb-1">
+                {label}
+              </div>
+              {group.map((session) => renderSessionItem(session))}
+            </div>
+          ))}
         </div>
 
         {/* Archived section */}
         {archivedSessions.length > 0 && (
-          <div className="relative border-t border-line-subtle">
-            {showArchived && (
-              <div className="absolute bottom-full left-0 w-full px-3 pb-1">
-                <div className="max-h-40 overflow-y-auto rounded-lg border border-line bg-surface p-1.5 shadow-lg">
-                  {archivedSessions.map((session) => renderSessionItem(session, true))}
-                </div>
-              </div>
-            )}
+          <div ref={archivedRef} className="border-t border-line-subtle">
             <button
               onClick={() => setShowArchived(!showArchived)}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-fg-muted hover:text-fg-dim transition-colors"
+              className="flex w-full items-center gap-1.5 h-8 px-3 text-sm text-fg-muted hover:text-fg-dim transition-colors"
             >
               <ChevronDownIcon className={`transition-transform ${showArchived ? "" : "-rotate-90"}`} />
               Archived ({archivedSessions.length})
             </button>
+            {showArchived && (
+              <div className="max-h-40 overflow-y-auto pb-1">
+                {archivedSessions.map((session) => renderSessionItem(session))}
+              </div>
+            )}
           </div>
         )}
-
-        {/* Theme picker */}
-        <div className="relative border-t border-line-subtle px-3 py-2">
-          {themeOpen && (
-            <div className="absolute bottom-full left-0 w-full px-3 pb-1">
-              <div className="flex flex-col gap-0.5 rounded-lg border border-line bg-surface p-1.5 shadow-lg">
-                {/* System option */}
-                <button
-                  onClick={() => setTheme("system")}
-                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                    themeId === "system"
-                      ? "bg-accent-surface text-accent font-medium"
-                      : "text-fg-dim hover:bg-surface-alt"
-                  }`}
-                >
-                  <span className="flex gap-0.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-white border border-gray-300" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-gray-900 border border-gray-700" />
-                  </span>
-                  System
-                </button>
-                {themeList.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setTheme(t.id)}
-                    className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                      themeId === t.id
-                        ? "bg-accent-surface text-accent font-medium"
-                        : "text-fg-dim hover:bg-surface-alt"
-                    }`}
-                  >
-                    <span className="flex gap-0.5">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full border border-black/10"
-                        style={{ backgroundColor: t.colors.canvas }}
-                      />
-                      <span
-                        className="w-2.5 h-2.5 rounded-full border border-black/10"
-                        style={{ backgroundColor: t.colors.accent }}
-                      />
-                    </span>
-                    {t.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <button
-            onClick={() => setThemeOpen(!themeOpen)}
-            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg transition-colors"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="5" />
-              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-            </svg>
-            Theme
-            <ChevronDownIcon className={`ml-auto transition-transform ${themeOpen ? "rotate-180" : ""}`} />
-          </button>
-        </div>
-
       </div>
 
       {/* Delete confirmation dialog */}

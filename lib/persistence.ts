@@ -215,12 +215,6 @@ export async function createSession(sessionName: string): Promise<boolean> {
 
 export type SessionEntry = { name: string; createdAt: string; updatedAt: string; archived: boolean };
 
-export async function listSessions(): Promise<SessionEntry[]> {
-  const res = await fetch("/api/session/list");
-  const { sessions } = await res.json();
-  return sessions;
-}
-
 export async function deleteSession(name: string): Promise<void> {
   await fetch(`/api/session?name=${encodeURIComponent(name)}`, {
     method: "DELETE",
@@ -242,11 +236,12 @@ export async function archiveSession(
   name: string,
   archived: boolean,
 ): Promise<void> {
-  await fetch("/api/session/archive", {
+  const res = await fetch("/api/session/archive", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, archived }),
   });
+  if (!res.ok) throw new Error("Failed to archive session");
 }
 
 // --- Debounce utility ---

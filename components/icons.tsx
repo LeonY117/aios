@@ -81,3 +81,51 @@ export function ChevronDownIcon({ width = 10, height = 10, className }: IconProp
     </svg>
   );
 }
+
+// ── Sidebar icons (16-unit viewBox, stroke-width 1.25) ──────
+
+export function RenameIcon({ width = 15, height = 15, className }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M10.5 2.5l3 3M2 14l.5-3L10.5 3l3 3-8 8-3 .5z" />
+    </svg>
+  );
+}
+
+export function ArchiveBoxIcon({ width = 15, height = 15, className }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M2 5h12M3.5 5v8.5h9V5" />
+      <path d="M6.5 8l1.5 1.5L9.5 8" />
+      <path d="M8 9.5V6.5" />
+    </svg>
+  );
+}
+
+export function DeleteIcon({ width = 15, height = 15, className }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3 4.5h10M6 4.5V3h4v1.5M4 4.5V14h8V4.5" />
+      <path d="M6.5 7v4M9.5 7v4" />
+    </svg>
+  );
+}
+
+export function CurvedArrowIcon({ width = 15, height = 15, className }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M4 6l-2-2 2-2" />
+      <path d="M2 4h7a4 4 0 0 1 0 8H6" />
+    </svg>
+  );
+}
+
+export function MoreDotsIcon({ width = 15, height = 15, className }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 14 14" fill="currentColor" className={className}>
+      <circle cx="3" cy="7" r="1.2" />
+      <circle cx="7" cy="7" r="1.2" />
+      <circle cx="11" cy="7" r="1.2" />
+    </svg>
+  );
+}

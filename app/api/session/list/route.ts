@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import { SESSIONS_DIR } from "@/lib/session-path";
 
-const SESSIONS_DIR = path.join(process.cwd(), "sessions");
+export const dynamic = "force-dynamic";
 
 type SessionEntry = { name: string; createdAt: string; updatedAt: string; archived: boolean };
 
@@ -16,14 +17,16 @@ export async function GET() {
         const sessionFile = path.join(SESSIONS_DIR, dir.name, "session.json");
         const stat = await fs.stat(sessionFile).catch(() => null);
         const mtime = stat?.mtime.toISOString();
+        let archived = false;
         try {
           const data = JSON.parse(await fs.readFile(sessionFile, "utf-8"));
+          archived = !!data.archived;
           if (data.createdAt) {
             return {
               name: dir.name,
               createdAt: data.createdAt,
               updatedAt: data.updatedAt ?? mtime ?? data.createdAt,
-              archived: !!data.archived,
+              archived,
             };
           }
         } catch {
@@ -31,7 +34,7 @@ export async function GET() {
         }
         const dirStat = await fs.stat(path.join(SESSIONS_DIR, dir.name));
         const fallback = dirStat.birthtime.toISOString();
-        return { name: dir.name, createdAt: fallback, updatedAt: mtime ?? fallback, archived: false };
+        return { name: dir.name, createdAt: fallback, updatedAt: mtime ?? fallback, archived };
       }),
     );
 

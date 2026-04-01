@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
-import path from "path";
-
-const SESSIONS_DIR = path.join(process.cwd(), "sessions");
-
-function sessionPath(name: string) {
-  return path.join(SESSIONS_DIR, name, "session.json");
-}
+import { sessionPath } from "@/lib/session-path";
 
 export async function POST(request: NextRequest) {
   const { name, archived } = await request.json();
-  if (!name) {
-    return NextResponse.json({ error: "name is required" }, { status: 400 });
+  if (!name || name.includes("/") || name.includes("..")) {
+    return NextResponse.json({ error: "Invalid name" }, { status: 400 });
   }
 
   const filePath = sessionPath(name);
