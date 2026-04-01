@@ -13,6 +13,7 @@ export default function CenterEdge({
   source,
   target,
   style,
+  data,
   markerEnd,
   markerStart,
 }: EdgeProps) {
@@ -58,6 +59,8 @@ export default function CenterEdge({
     targetPosition: targetPos,
   });
 
+  const isAutoRead = !!(data as Record<string, unknown> | undefined)?.autoRead;
+
   return (
     <>
       {/* Wide invisible path for easier click/hover target */}
@@ -79,6 +82,7 @@ export default function CenterEdge({
         ].join(" ")}
         stroke={style?.stroke ?? "var(--edge)"}
         strokeWidth={1.5}
+        strokeDasharray={isAutoRead ? "6 4" : undefined}
         markerEnd={markerEnd}
         markerStart={markerStart}
       />

@@ -78,12 +78,13 @@ export function addEdgesFromSots(
   edges: Edge[],
   sotNodeIds: string[],
   targetId: string,
+  data?: Record<string, unknown>,
 ): Edge[] {
   let next = [...edges];
   for (const sotId of sotNodeIds) {
     if (!next.some((e) => e.source === sotId && e.target === targetId)) {
       next = addEdge(
-        { source: sotId, target: targetId, sourceHandle: null, targetHandle: null },
+        { source: sotId, target: targetId, sourceHandle: null, targetHandle: null, data },
         next,
       );
     }

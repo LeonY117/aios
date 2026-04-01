@@ -2,7 +2,7 @@ import { streamText, stepCountIs, type ModelMessage } from "ai";
 import { getModel, getToolsForModel, MODELS } from "@/lib/ai/models";
 import { buildSystemPrompt, buildBtwPrompt, type SotContext } from "@/lib/ai/system-prompt";
 import { withSystemCacheBreakpoint, withHistoryCacheBreakpoint } from "@/lib/ai/prompt-cache";
-import { buildWorkspaceBashTool } from "@/lib/ai/workspace-bash";
+import { buildWorkspaceBashTool, extractReadNodeIds } from "@/lib/ai/workspace-bash";
 
 export const maxDuration = 60;
 
@@ -11,6 +11,7 @@ export type StreamEvent =
   | { type: "tool-call"; toolName: string; input?: Record<string, unknown> }
   | { type: "tool-result"; toolName: string; result: string }
   | { type: "source"; url: string; title?: string }
+  | { type: "auto-edge"; nodeIds: string[] }
   | { type: "error"; message: string };
 
 const encoder = new TextEncoder();
@@ -54,9 +55,11 @@ export async function POST(req: Request) {
     const cachedMessages = withHistoryCacheBreakpoint(messages, config.provider);
     const tools = getToolsForModel(config, { webSearch });
 
+    let fileToNodeId: Map<string, string> | undefined;
     if (hasWorkspace) {
-      const wsTools = await buildWorkspaceBashTool(sessionName, chatNodeId);
-      Object.assign(tools, wsTools);
+      const ws = await buildWorkspaceBashTool(sessionName, chatNodeId);
+      Object.assign(tools, ws.tools);
+      fileToNodeId = ws.fileToNodeId;
     }
 
     const result = streamText({
@@ -92,6 +95,18 @@ export async function POST(req: Request) {
                 input: chunk.input as Record<string, unknown>,
               }),
             );
+            // Emit auto-edge events when agent reads workspace files
+            if (chunk.toolName === "workspace_bash" && fileToNodeId) {
+              const command = (chunk.input as Record<string, unknown>)?.command;
+              if (typeof command === "string") {
+                const readIds = extractReadNodeIds(command, fileToNodeId);
+                if (readIds.length > 0) {
+                  controller.enqueue(
+                    formatEvent({ type: "auto-edge", nodeIds: readIds }),
+                  );
+                }
+              }
+            }
             break;
           case "tool-result":
             controller.enqueue(

@@ -60,6 +60,8 @@ export type AttachedSot = {
   content: string;
   sourceType: string;
   color: string;
+  /** True when the edge was created by the agent reading a workspace file */
+  autoRead?: boolean;
 };
 
 export type ChatNodeData = {

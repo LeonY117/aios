@@ -20,6 +20,7 @@ export type ChatStreamCallbacks = {
   onToolCall: (event: ToolCallEvent) => void;
   onToolResult: (event: ToolResultEvent) => void;
   onSource: (source: ChatSource) => void;
+  onAutoEdge?: (nodeIds: string[]) => void;
   onComplete: (content: string, sources: ChatSource[]) => void;
   onError: (error: string) => void;
 };
@@ -108,6 +109,9 @@ export async function streamChat(
         case "source":
           sources.push({ url: event.url, title: event.title });
           callbacks.onSource({ url: event.url, title: event.title });
+          break;
+        case "auto-edge":
+          callbacks.onAutoEdge?.(event.nodeIds);
           break;
         case "error":
           assistantContent += `\n\nError: ${event.message}`;

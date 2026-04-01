@@ -67,6 +67,30 @@ function truncateOutput(text: string): string {
   return text.slice(0, MAX_OUTPUT_CHARS) + `\n\n... output truncated (${text.length} chars total)`;
 }
 
+/**
+ * Extract node IDs of files referenced by a bash command (cat, head, tail, less).
+ * Returns empty array for commands that don't target specific files (grep, ls, wc).
+ */
+export function extractReadNodeIds(
+  command: string,
+  fileToNodeId: Map<string, string>,
+): string[] {
+  // Match commands that read specific files: cat, head, tail, less
+  const readCmd = command.match(/^\s*(?:cat|head|tail|less)\s+(.+)/);
+  if (!readCmd) return [];
+
+  const args = readCmd[1].split(/\s+/);
+  const nodeIds: string[] = [];
+  for (const arg of args) {
+    if (arg.startsWith("-")) continue; // skip flags like -20
+    // Strip leading ./ or /workspace/
+    const clean = arg.replace(/^(?:\.\/|\/workspace\/)/, "");
+    const nodeId = fileToNodeId.get(clean);
+    if (nodeId) nodeIds.push(nodeId);
+  }
+  return nodeIds;
+}
+
 // ---------------------------------------------------------------------------
 // Main builder
 // ---------------------------------------------------------------------------
@@ -77,10 +101,16 @@ type SessionNode = {
   data: Record<string, unknown>;
 };
 
+export type WorkspaceBashResult = {
+  tools: ToolSet;
+  /** Maps virtual filename (e.g. "meeting-notes.md") → canvas node ID */
+  fileToNodeId: Map<string, string>;
+};
+
 export async function buildWorkspaceBashTool(
   sessionName: string,
   ownChatNodeId: string,
-): Promise<ToolSet> {
+): Promise<WorkspaceBashResult> {
   let sessionData: { nodes: SessionNode[] };
   try {
     const raw = await fs.readFile(
@@ -90,13 +120,14 @@ export async function buildWorkspaceBashTool(
     sessionData = JSON.parse(raw);
   } catch {
     // Session doesn't exist or is malformed — skip the tool
-    return {};
+    return { tools: {}, fileToNodeId: new Map() };
   }
 
   const contentDir = path.join(SESSIONS_DIR, sessionName, "content");
   const files: Record<string, string> = {};
   const manifestLines: string[] = ["# Workspace blocks\n"];
   const usedSlugs = new Set<string>();
+  const fileToNodeId = new Map<string, string>();
 
   // Read all content files in parallel
   const entries = await Promise.all(
@@ -127,6 +158,7 @@ export async function buildWorkspaceBashTool(
       const slug = deduplicateSlug(slugify(title), usedSlugs);
       const filename = `${slug}.md`;
       files[`/workspace/${filename}`] = content;
+      fileToNodeId.set(filename, id);
       const sourceType = (data.sourceType as string) || "manual";
       manifestLines.push(`- **${title}** (${sourceType}) → \`${filename}\``);
     }
@@ -158,6 +190,9 @@ export async function buildWorkspaceBashTool(
         continue;
       }
 
+      if (!isOwnChat) {
+        fileToNodeId.set(filename, id);
+      }
       const label = isOwnChat ? `${title} (this conversation)` : title;
       const source = (data.source as string) || "interactive";
       manifestLines.push(`- **${label}** (chat, ${source}) → \`${filename}\``);
@@ -192,5 +227,5 @@ The workspace is read-only. File names are derived from block titles.`,
     },
   });
 
-  return { workspace_bash };
+  return { tools: { workspace_bash }, fileToNodeId };
 }

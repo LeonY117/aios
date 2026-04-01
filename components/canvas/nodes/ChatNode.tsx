@@ -65,6 +65,19 @@ function selectConnectedSources(id: string) {
   };
 }
 
+/** Returns a Set of source node IDs connected via auto-read edges. */
+function selectAutoReadSourceIds(id: string) {
+  return (state: ReactFlowState) => {
+    const ids = new Set<string>();
+    for (const e of state.edges) {
+      if (e.target === id && (e.data as Record<string, unknown> | undefined)?.autoRead) {
+        ids.add(e.source);
+      }
+    }
+    return ids;
+  };
+}
+
 import { shallowArrayEqual } from "@/lib/canvas/shallow-equal";
 
 // ---------------------------------------------------------------------------
@@ -189,7 +202,7 @@ function SourcesDropdown({ sources }: { sources: ChatSource[] }) {
 
 import { SOURCE_ENDPOINT } from "@/lib/canvas/source-endpoints";
 import { copyWithFeedback } from "@/lib/canvas/clipboard";
-import { updateNodeData, updateNode, removeEdgeBetween } from "@/lib/canvas/actions";
+import { updateNodeData, updateNode, removeEdgeBetween, addEdgesFromSots } from "@/lib/canvas/actions";
 import { CheckIcon, CopyIcon, LinkIcon, RefreshIcon, ChevronDownIcon } from "@/components/icons";
 import NodeWindowControls from "./NodeWindowControls";
 import NodeSelectionBar from "./NodeSelectionBar";
@@ -335,7 +348,11 @@ function ContextBar({
         {sots.map((sot) => (
           <div
             key={sot.nodeId}
-            className="nodrag flex items-center gap-1 rounded-md bg-surface border border-line pl-1.5 pr-1 py-0.5 shadow-sm"
+            className={`nodrag flex items-center gap-1 rounded-md bg-surface pl-1.5 pr-1 py-0.5 shadow-sm ${
+              sot.autoRead
+                ? "border border-dashed border-line"
+                : "border border-line"
+            }`}
           >
             <div className={`w-1.5 h-1.5 rounded-full ${sot.color}`} />
             <span className="text-[10px] font-medium text-fg-dim">
@@ -524,10 +541,12 @@ function ChatNode({
   data,
   selected,
 }: NodeProps & { data: ChatNodeData }) {
-  const { setNodes, setEdges, screenToFlowPosition } = useReactFlow();
+  const { setNodes, setEdges } = useReactFlow();
   const isConnecting = useStore(selectIsConnecting);
   const sourceSelector = useMemo(() => selectConnectedSources(id), [id]);
   const sourceNodes = useStore(sourceSelector, shallowArrayEqual);
+  const autoReadSelector = useMemo(() => selectAutoReadSourceIds(id), [id]);
+  const autoReadIds = useStore(autoReadSelector);
   const [contextCopied, setContextCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -552,6 +571,7 @@ function ChatNode({
     const results: AttachedSot[] = [];
     let colorIdx = 0;
     for (const n of sourceNodes) {
+      const isAutoRead = autoReadIds.has(n.id);
       if (n.type === "sotCard") {
         const d = n.data as SotNodeData;
         results.push({
@@ -560,6 +580,7 @@ function ChatNode({
           content: d.content,
           sourceType: d.sourceType,
           color: SOT_COLORS[colorIdx++ % SOT_COLORS.length],
+          autoRead: isAutoRead,
         });
       } else if (n.type === "chatWindow") {
         const d = n.data as ChatNodeData;
@@ -573,6 +594,7 @@ function ChatNode({
             content,
             sourceType: "chat",
             color: SOT_COLORS[colorIdx++ % SOT_COLORS.length],
+            autoRead: isAutoRead,
           });
         }
       }
@@ -580,7 +602,7 @@ function ChatNode({
       // included as transitive nodes by the selector
     }
     return results;
-  }, [sourceNodes]);
+  }, [sourceNodes, autoReadIds]);
 
   const autoCollapsed =
     (data.messages?.length ?? 0) > 0 && attachedSots.length > 0;
@@ -692,11 +714,13 @@ function ChatNode({
           {
             messages: currentMessages,
             modelId: data.modelId || DEFAULT_MODEL_ID,
-            attachedSots: attachedSots.map((s) => ({
-              title: s.title,
-              content: s.content,
-              sourceType: s.sourceType,
-            })),
+            attachedSots: attachedSots
+              .filter((s) => !s.autoRead)
+              .map((s) => ({
+                title: s.title,
+                content: s.content,
+                sourceType: s.sourceType,
+              })),
             webSearch: data.webSearch ?? false,
             signal: abortController.signal,
             sessionName,
@@ -736,6 +760,9 @@ function ChatNode({
                 bashCallsRef.current = updated;
                 setBashCalls([...updated]);
               }
+            },
+            onAutoEdge: (nodeIds) => {
+              setEdges((eds) => addEdgesFromSots(eds, nodeIds, id, { autoRead: true }));
             },
             onSource: (source) => {
               collectedSources.push(source);
@@ -807,6 +834,7 @@ function ChatNode({
       updateData,
       sessionName,
       id,
+      setEdges,
     ],
   );
 

@@ -332,8 +332,6 @@ export const ListBehaviorFix = Extension.create({
   },
 
   addProseMirrorPlugins() {
-    const editor = this.editor;
-
     return [
       new Plugin({
         key: new PluginKey("listBehaviorFix"),
