@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
-
-const SESSIONS_DIR = path.join(process.cwd(), "sessions");
+import { SESSIONS_DIR, sessionPath, isInvalidSessionName } from "@/lib/session-path";
 
 const EMPTY_SESSION = { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } };
 
-function sessionPath(name: string) {
-  return path.join(SESSIONS_DIR, name, "session.json");
-}
-
 export async function GET(request: NextRequest) {
   const name = request.nextUrl.searchParams.get("name") ?? "default";
+  if (isInvalidSessionName(name)) {
+    return NextResponse.json({ error: "Invalid name" }, { status: 400 });
+  }
   const filePath = sessionPath(name);
 
   try {
@@ -24,6 +22,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const name = request.nextUrl.searchParams.get("name") ?? "default";
+  if (isInvalidSessionName(name)) {
+    return NextResponse.json({ error: "Invalid name" }, { status: 400 });
+  }
   const isCreate = request.nextUrl.searchParams.get("create") === "true";
   const filePath = sessionPath(name);
   const body = await request.json();
@@ -40,31 +41,32 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Preserve existing createdAt on saves, add it on creation
-  let createdAt = body.createdAt;
-  if (!createdAt) {
-    try {
-      const existing = JSON.parse(await fs.readFile(filePath, "utf-8"));
-      createdAt = existing.createdAt;
-    } catch {
-      // File doesn't exist yet — this is a new session
-      createdAt = new Date().toISOString();
-    }
+  // Read existing metadata and merge — layout saves should never clobber
+  // fields like archived, createdAt that are managed by other endpoints.
+  let existing: Record<string, unknown> = {};
+  try {
+    existing = JSON.parse(await fs.readFile(filePath, "utf-8"));
+  } catch {
+    // File doesn't exist yet
   }
 
+  const createdAt = body.createdAt || existing.createdAt || new Date().toISOString();
   const updatedAt = new Date().toISOString();
 
+  // Merge: existing metadata first, then body (nodes/edges/viewport), then timestamps
+  const merged = { ...existing, ...body, createdAt, updatedAt };
+
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(
-    filePath,
-    JSON.stringify({ ...body, createdAt, updatedAt }, null, 2),
-  );
+  await fs.writeFile(filePath, JSON.stringify(merged, null, 2));
 
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(request: NextRequest) {
   const name = request.nextUrl.searchParams.get("name") ?? "default";
+  if (isInvalidSessionName(name)) {
+    return NextResponse.json({ error: "Invalid name" }, { status: 400 });
+  }
   const sessionDir = path.join(SESSIONS_DIR, name);
 
   try {

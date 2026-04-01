@@ -17,15 +17,17 @@ export default async function Home() {
     for (const dir of dirs) {
       const sessionFile = path.join(SESSIONS_DIR, dir.name, "session.json");
       let createdAt: Date;
+      let archived = false;
       try {
         const data = JSON.parse(await fs.readFile(sessionFile, "utf-8"));
+        archived = !!data.archived;
         createdAt = data.createdAt
           ? new Date(data.createdAt)
           : (await fs.stat(path.join(SESSIONS_DIR, dir.name))).birthtime;
       } catch {
         createdAt = (await fs.stat(path.join(SESSIONS_DIR, dir.name))).birthtime;
       }
-      if (!newest || createdAt > newest.createdAt) {
+      if (!archived && (!newest || createdAt > newest.createdAt)) {
         newest = { name: dir.name, createdAt };
       }
     }

@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
-
-const SESSIONS_DIR = path.join(process.cwd(), "sessions");
+import { SESSIONS_DIR, isInvalidSessionName } from "@/lib/session-path";
 
 export async function POST(request: Request) {
   const { oldName, newName } = await request.json();
 
-  if (!oldName || !newName) {
+  if (isInvalidSessionName(oldName) || isInvalidSessionName(newName)) {
     return NextResponse.json(
-      { error: "Missing oldName or newName" },
+      { error: "Invalid name" },
       { status: 400 },
     );
   }
