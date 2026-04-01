@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatSource } from "@/types";
+import type { ChatMessage, ChatSource, ContentBlock } from "@/types";
 import type { StreamEvent } from "@/app/api/chat/route";
 
 // ---------------------------------------------------------------------------
@@ -19,9 +19,10 @@ export type ChatStreamCallbacks = {
   onTextDelta: (fullContent: string, sources: ChatSource[]) => void;
   onToolCall: (event: ToolCallEvent) => void;
   onToolResult: (event: ToolResultEvent) => void;
+  onBlocksUpdate: (blocks: ContentBlock[]) => void;
   onSource: (source: ChatSource) => void;
   onAutoEdge?: (nodeIds: string[]) => void;
-  onComplete: (content: string, sources: ChatSource[]) => void;
+  onComplete: (content: string, sources: ChatSource[], blocks: ContentBlock[]) => void;
   onError: (error: string) => void;
 };
 
@@ -75,6 +76,7 @@ export async function streamChat(
   let assistantContent = "";
   let buffer = "";
   const sources: ChatSource[] = [];
+  const blocks: ContentBlock[] = [];
 
   while (true) {
     const { done, value } = await reader.read();
@@ -90,17 +92,39 @@ export async function streamChat(
       const event = JSON.parse(trimmed.slice(6)) as StreamEvent;
 
       switch (event.type) {
-        case "text":
+        case "text": {
           assistantContent += event.text;
+          const last = blocks[blocks.length - 1];
+          if (last && last.type === "text") {
+            last.text += event.text;
+          } else {
+            blocks.push({ type: "text", text: event.text });
+          }
+          callbacks.onBlocksUpdate([...blocks]);
           callbacks.onTextDelta(assistantContent, [...sources]);
           break;
+        }
         case "tool-call":
+          if (event.toolName === "workspace_bash" && event.input?.command) {
+            blocks.push({ type: "tool_call", command: event.input.command as string });
+            callbacks.onBlocksUpdate([...blocks]);
+          }
           callbacks.onToolCall({
             toolName: event.toolName,
             input: event.input,
           });
           break;
         case "tool-result":
+          if (event.toolName === "workspace_bash") {
+            const pending = blocks.findLast(
+              (b): b is Extract<ContentBlock, { type: "tool_call" }> =>
+                b.type === "tool_call" && !b.result,
+            );
+            if (pending) {
+              pending.result = event.result;
+              callbacks.onBlocksUpdate([...blocks]);
+            }
+          }
           callbacks.onToolResult({
             toolName: event.toolName,
             result: event.result,
@@ -121,7 +145,7 @@ export async function streamChat(
   }
 
   if (assistantContent) {
-    callbacks.onComplete(assistantContent, sources);
+    callbacks.onComplete(assistantContent, sources, blocks);
   } else {
     callbacks.onError(
       "Something went wrong — the model returned an empty response. Check the server logs for details.",

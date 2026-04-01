@@ -46,9 +46,14 @@ export type ToolCallEntry = {
   result: string;
 };
 
+export type ContentBlock =
+  | { type: "text"; text: string }
+  | { type: "tool_call"; command: string; result?: string };
+
 export type ChatMessage = {
   role: "user" | "assistant" | "system";
   content: string;
+  blocks?: ContentBlock[];
   timestamp?: number;
   sources?: ChatSource[];
   toolCalls?: ToolCallEntry[];

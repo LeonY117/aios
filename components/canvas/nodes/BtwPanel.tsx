@@ -125,6 +125,7 @@ export default function BtwPanel({
           },
           onToolCall: () => {},
           onToolResult: () => {},
+          onBlocksUpdate: () => {},
           onSource: () => {},
           onComplete: (content) => {
             setIsStreaming(false);

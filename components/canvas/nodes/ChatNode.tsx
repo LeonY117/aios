@@ -28,7 +28,7 @@ import { useBtwSelection } from "@/lib/canvas/useBtwSelection";
 import { compileSingleContext } from "@/lib/context-export";
 import { ALL_MODELS, DEFAULT_MODEL_ID, getModelName, modelSupportsWebSearch } from "@/lib/ai/models-client";
 import { useTheme } from "@/lib/themes";
-import type { ChatNodeData, ChatMessage, ChatSource, AttachedSot, SotNodeData } from "@/types";
+import type { ChatNodeData, ChatMessage, ChatSource, AttachedSot, SotNodeData, ContentBlock } from "@/types";
 import { streamChat } from "@/lib/api/chat-client";
 import { useWorkspaceName } from "@/lib/ai/workspace-context";
 import type { Node } from "@xyflow/react";
@@ -152,6 +152,21 @@ function ToolCallsDisplay({ calls }: { calls: { command: string; result?: string
       )}
     </div>
   );
+}
+
+function getMessageBlocks(msg: ChatMessage): ContentBlock[] {
+  if (msg.blocks && msg.blocks.length > 0) return msg.blocks;
+  // Legacy fallback for old saved sessions
+  const blocks: ContentBlock[] = [];
+  if (msg.toolCalls) {
+    for (const tc of msg.toolCalls) {
+      blocks.push({ type: "tool_call", command: tc.command, result: tc.result });
+    }
+  }
+  if (msg.content) {
+    blocks.push({ type: "text", text: msg.content });
+  }
+  return blocks;
 }
 
 function SourcesDropdown({ sources }: { sources: ChatSource[] }) {
@@ -551,8 +566,8 @@ function ChatNode({
   const [linkCopied, setLinkCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [bashCalls, setBashCalls] = useState<{ command: string; result?: string }[]>([]);
-  const bashCallsRef = useRef<{ command: string; result?: string }[]>([]);
+  const [streamingBlocks, setStreamingBlocks] = useState<ContentBlock[]>([]);
+  const streamingBlocksRef = useRef<ContentBlock[]>([]);
   const sessionName = useWorkspaceName();
   const [contextCollapsed, setContextCollapsed] = useState(false);
   const [hasUserToggledContext, setHasUserToggledContext] = useState(false);
@@ -706,8 +721,8 @@ function ChatNode({
       abortRef.current = abortController;
 
       const collectedSources: ChatSource[] = [];
-      bashCallsRef.current = [];
-      setBashCalls([]);
+      streamingBlocksRef.current = [];
+      setStreamingBlocks([]);
 
       try {
         await streamChat(
@@ -734,11 +749,9 @@ function ChatNode({
                   {
                     role: "assistant" as const,
                     content: fullContent,
+                    blocks: streamingBlocksRef.current,
                     timestamp: Date.now(),
                     sources: sources.length > 0 ? sources : undefined,
-                    toolCalls: bashCallsRef.current.length > 0
-                      ? bashCallsRef.current.filter((e): e is { command: string; result: string } => !!e.result)
-                      : undefined,
                   },
                 ],
               });
@@ -746,20 +759,12 @@ function ChatNode({
             onToolCall: (event) => {
               if (event.toolName === "web_search") {
                 setIsSearching(true);
-              } else if (event.toolName === "workspace_bash" && event.input?.command) {
-                const entry = { command: event.input!.command as string };
-                bashCallsRef.current = [...bashCallsRef.current, entry];
-                setBashCalls([...bashCallsRef.current]);
               }
             },
-            onToolResult: (event) => {
-              if (event.toolName === "workspace_bash") {
-                const updated = [...bashCallsRef.current];
-                const pending = updated.findLast((e) => !e.result);
-                if (pending) pending.result = event.result;
-                bashCallsRef.current = updated;
-                setBashCalls([...updated]);
-              }
+            onToolResult: () => {},
+            onBlocksUpdate: (blocks) => {
+              streamingBlocksRef.current = blocks;
+              setStreamingBlocks([...blocks]);
             },
             onAutoEdge: (nodeIds) => {
               setEdges((eds) => addEdgesFromSots(eds, nodeIds, id, { autoRead: true }));
@@ -767,17 +772,20 @@ function ChatNode({
             onSource: (source) => {
               collectedSources.push(source);
             },
-            onComplete: (content, sources) => {
+            onComplete: (content, sources, blocks) => {
               setIsSearching(false);
-              const completedCalls = bashCallsRef.current
-                .filter((e): e is { command: string; result: string } => !!e.result);
-              setBashCalls([]);
+              const completedCalls = blocks
+                .filter((b): b is Extract<ContentBlock, { type: "tool_call" }> =>
+                  b.type === "tool_call" && !!b.result)
+                .map((b) => ({ command: b.command, result: b.result! }));
+              setStreamingBlocks([]);
               updateData({
                 messages: [
                   ...currentMessages,
                   {
                     role: "assistant" as const,
                     content,
+                    blocks,
                     timestamp: Date.now(),
                     sources: sources.length > 0 ? sources : undefined,
                     toolCalls: completedCalls.length > 0 ? completedCalls : undefined,
@@ -788,7 +796,7 @@ function ChatNode({
             },
             onError: (error) => {
               setIsSearching(false);
-              setBashCalls([]);
+              setStreamingBlocks([]);
               updateData({
                 messages: [
                   ...currentMessages,
@@ -987,17 +995,20 @@ function ChatNode({
                 </div>
               ) : (
                 <div key={i}>
-                  {msg.toolCalls && msg.toolCalls.length > 0 && !isLastAssistant && (
-                    <ToolCallsDisplay calls={msg.toolCalls} />
+                  {(isLastAssistant && streamingBlocks.length > 0
+                    ? streamingBlocks
+                    : getMessageBlocks(msg)
+                  ).map((block, bi) =>
+                    block.type === "tool_call" ? (
+                      <ToolCallsDisplay key={bi} calls={[block]} />
+                    ) : (
+                      <div key={bi} className={`prose prose-xs max-w-none text-xs leading-relaxed text-fg-dim ${isLastAssistant ? "streaming-prose" : ""}`}>
+                        <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>
+                          {block.text}
+                        </ReactMarkdown>
+                      </div>
+                    ),
                   )}
-                  {isLastAssistant && bashCalls.length > 0 && (
-                    <ToolCallsDisplay calls={bashCalls} />
-                  )}
-                  <div className={`prose prose-xs max-w-none text-xs leading-relaxed text-fg-dim ${isLastAssistant ? "streaming-prose" : ""}`}>
-                    <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>
-                      {msg.content}
-                    </ReactMarkdown>
-                  </div>
                   {msg.sources && msg.sources.length > 0 && (
                     <SourcesDropdown sources={msg.sources} />
                   )}
@@ -1010,7 +1021,7 @@ function ChatNode({
                 Searching the web…
               </div>
             )}
-            {data.isStreaming && !isSearching && bashCalls.length === 0 && (
+            {data.isStreaming && !isSearching && streamingBlocks.length === 0 && (
               <span className="inline-block w-1.5 h-3.5 bg-fg-muted animate-pulse" />
             )}
             <div ref={messagesEndRef} />
@@ -1133,15 +1144,18 @@ function ChatNode({
                     </div>
                   ) : (
                     <div key={i}>
-                      {msg.toolCalls && msg.toolCalls.length > 0 && !isLastAssistant && (
-                        <ToolCallsDisplay calls={msg.toolCalls} />
+                      {(isLastAssistant && streamingBlocks.length > 0
+                        ? streamingBlocks
+                        : getMessageBlocks(msg)
+                      ).map((block, bi) =>
+                        block.type === "tool_call" ? (
+                          <ToolCallsDisplay key={bi} calls={[block]} />
+                        ) : (
+                          <div key={bi} className={`prose prose-xs max-w-none text-xs leading-relaxed text-fg-dim ${isLastAssistant ? "streaming-prose" : ""}`}>
+                            <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>{block.text}</ReactMarkdown>
+                          </div>
+                        ),
                       )}
-                      {isLastAssistant && bashCalls.length > 0 && (
-                        <ToolCallsDisplay calls={bashCalls} />
-                      )}
-                      <div className={`prose prose-xs max-w-none text-xs leading-relaxed text-fg-dim ${isLastAssistant ? "streaming-prose" : ""}`}>
-                        <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>{msg.content}</ReactMarkdown>
-                      </div>
                       {msg.sources && msg.sources.length > 0 && <SourcesDropdown sources={msg.sources} />}
                     </div>
                   );
@@ -1152,7 +1166,7 @@ function ChatNode({
                     Searching the web…
                   </div>
                 )}
-                {data.isStreaming && !isSearching && bashCalls.length === 0 && (
+                {data.isStreaming && !isSearching && streamingBlocks.length === 0 && (
                   <span className="inline-block w-1.5 h-3.5 bg-fg-muted animate-pulse" />
                 )}
               </div>
