@@ -16,6 +16,7 @@ function serializeChatMessages(messages: ChatMessage[]): string {
       content: m.content,
       ...(m.timestamp != null ? { timestamp: m.timestamp } : {}),
       ...(m.sources && m.sources.length > 0 ? { sources: m.sources } : {}),
+      ...(m.toolCalls && m.toolCalls.length > 0 ? { toolCalls: m.toolCalls } : {}),
     })),
   );
 }

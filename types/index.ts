@@ -41,11 +41,17 @@ export type ChatSource = {
   title?: string;
 };
 
+export type ToolCallEntry = {
+  command: string;
+  result: string;
+};
+
 export type ChatMessage = {
   role: "user" | "assistant" | "system";
   content: string;
   timestamp?: number;
   sources?: ChatSource[];
+  toolCalls?: ToolCallEntry[];
 };
 
 export type AttachedSot = {

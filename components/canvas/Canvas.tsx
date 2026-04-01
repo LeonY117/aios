@@ -46,6 +46,7 @@ import {
 } from "@/lib/nodes";
 import { useTheme } from "@/lib/themes";
 import { selectAllSots } from "@/lib/canvas/actions";
+import { WorkspaceProvider } from "@/lib/ai/workspace-context";
 import { useRouter } from "next/navigation";
 import {
   saveSession,
@@ -318,7 +319,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
   );
 
   return (
-    <>
+    <WorkspaceProvider value={{ sessionName: workspace }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -391,7 +392,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
           {saveStatus === "saving" ? "Saving..." : "Saved"}
         </div>
       )}
-    </>
+    </WorkspaceProvider>
   );
 }
 

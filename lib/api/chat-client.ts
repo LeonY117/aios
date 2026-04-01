@@ -5,9 +5,20 @@ import type { StreamEvent } from "@/app/api/chat/route";
 // Types
 // ---------------------------------------------------------------------------
 
+export type ToolCallEvent = {
+  toolName: string;
+  input?: Record<string, unknown>;
+};
+
+export type ToolResultEvent = {
+  toolName: string;
+  result: string;
+};
+
 export type ChatStreamCallbacks = {
   onTextDelta: (fullContent: string, sources: ChatSource[]) => void;
-  onToolCall: (toolName: string) => void;
+  onToolCall: (event: ToolCallEvent) => void;
+  onToolResult: (event: ToolResultEvent) => void;
   onSource: (source: ChatSource) => void;
   onComplete: (content: string, sources: ChatSource[]) => void;
   onError: (error: string) => void;
@@ -20,6 +31,8 @@ export type ChatStreamOptions = {
   webSearch: boolean;
   signal?: AbortSignal;
   btw?: { selectedText: string };
+  sessionName?: string;
+  chatNodeId?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -42,6 +55,8 @@ export async function streamChat(
       attachedSots: options.attachedSots,
       webSearch: options.webSearch,
       ...(options.btw ? { btw: options.btw } : {}),
+      ...(options.sessionName ? { sessionName: options.sessionName } : {}),
+      ...(options.chatNodeId ? { chatNodeId: options.chatNodeId } : {}),
     }),
     signal: options.signal,
   });
@@ -79,7 +94,16 @@ export async function streamChat(
           callbacks.onTextDelta(assistantContent, [...sources]);
           break;
         case "tool-call":
-          callbacks.onToolCall(event.toolName);
+          callbacks.onToolCall({
+            toolName: event.toolName,
+            input: event.input,
+          });
+          break;
+        case "tool-result":
+          callbacks.onToolResult({
+            toolName: event.toolName,
+            result: event.result,
+          });
           break;
         case "source":
           sources.push({ url: event.url, title: event.title });

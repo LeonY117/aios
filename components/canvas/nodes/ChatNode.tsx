@@ -30,6 +30,7 @@ import { ALL_MODELS, DEFAULT_MODEL_ID, getModelName, modelSupportsWebSearch } fr
 import { useTheme } from "@/lib/themes";
 import type { ChatNodeData, ChatMessage, ChatSource, AttachedSot, SotNodeData } from "@/types";
 import { streamChat } from "@/lib/api/chat-client";
+import { useWorkspaceName } from "@/lib/ai/workspace-context";
 import type { Node } from "@xyflow/react";
 
 // ---------------------------------------------------------------------------
@@ -101,6 +102,44 @@ function CodeBlock({
 const REMARK_PLUGINS = [remarkGfm];
 const MD_COMPONENTS = { code: CodeBlock };
 
+
+function ToolCallsDisplay({ calls }: { calls: { command: string; result?: string }[] }) {
+  const [expanded, setExpanded] = useState(false);
+  if (calls.length === 0) return null;
+
+  const summary = calls.length === 1
+    ? `$ ${calls[0].command}`
+    : `${calls.length} commands`;
+
+  return (
+    <div className="mb-2 rounded border border-line-subtle bg-hover/40 text-[11px] font-mono">
+      <button
+        onClick={() => setExpanded((o) => !o)}
+        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-fg-muted hover:text-fg-dim transition-colors"
+      >
+        <svg
+          width="10" height="10" viewBox="0 0 10 10"
+          className={`shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`}
+        >
+          <path d="M3 1.5L7 5L3 8.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span className="truncate">{summary}</span>
+        {calls.some((e) => !e.result) && (
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse ml-auto shrink-0" />
+        )}
+      </button>
+      {expanded && (
+        <div className="border-t border-line-subtle px-2.5 py-1.5 space-y-1">
+          {calls.map((entry, i) => (
+            <div key={i} className="text-fg-muted">
+              <span className="text-fg-faint">$ </span>{entry.command}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function SourcesDropdown({ sources }: { sources: ChatSource[] }) {
   const [open, setOpen] = useState(false);
@@ -493,6 +532,9 @@ function ChatNode({
   const [linkCopied, setLinkCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [bashCalls, setBashCalls] = useState<{ command: string; result?: string }[]>([]);
+  const bashCallsRef = useRef<{ command: string; result?: string }[]>([]);
+  const sessionName = useWorkspaceName();
   const [contextCollapsed, setContextCollapsed] = useState(false);
   const [hasUserToggledContext, setHasUserToggledContext] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -642,6 +684,8 @@ function ChatNode({
       abortRef.current = abortController;
 
       const collectedSources: ChatSource[] = [];
+      bashCallsRef.current = [];
+      setBashCalls([]);
 
       try {
         await streamChat(
@@ -655,6 +699,8 @@ function ChatNode({
             })),
             webSearch: data.webSearch ?? false,
             signal: abortController.signal,
+            sessionName,
+            chatNodeId: id,
           },
           {
             onTextDelta: (fullContent, sources) => {
@@ -666,13 +712,29 @@ function ChatNode({
                     content: fullContent,
                     timestamp: Date.now(),
                     sources: sources.length > 0 ? sources : undefined,
+                    toolCalls: bashCallsRef.current.length > 0
+                      ? bashCallsRef.current.filter((e): e is { command: string; result: string } => !!e.result)
+                      : undefined,
                   },
                 ],
               });
             },
-            onToolCall: (toolName) => {
-              if (toolName === "web_search") {
+            onToolCall: (event) => {
+              if (event.toolName === "web_search") {
                 setIsSearching(true);
+              } else if (event.toolName === "workspace_bash" && event.input?.command) {
+                const entry = { command: event.input!.command as string };
+                bashCallsRef.current = [...bashCallsRef.current, entry];
+                setBashCalls([...bashCallsRef.current]);
+              }
+            },
+            onToolResult: (event) => {
+              if (event.toolName === "workspace_bash") {
+                const updated = [...bashCallsRef.current];
+                const pending = updated.findLast((e) => !e.result);
+                if (pending) pending.result = event.result;
+                bashCallsRef.current = updated;
+                setBashCalls([...updated]);
               }
             },
             onSource: (source) => {
@@ -680,6 +742,9 @@ function ChatNode({
             },
             onComplete: (content, sources) => {
               setIsSearching(false);
+              const completedCalls = bashCallsRef.current
+                .filter((e): e is { command: string; result: string } => !!e.result);
+              setBashCalls([]);
               updateData({
                 messages: [
                   ...currentMessages,
@@ -688,6 +753,7 @@ function ChatNode({
                     content,
                     timestamp: Date.now(),
                     sources: sources.length > 0 ? sources : undefined,
+                    toolCalls: completedCalls.length > 0 ? completedCalls : undefined,
                   },
                 ],
                 isStreaming: false,
@@ -695,6 +761,7 @@ function ChatNode({
             },
             onError: (error) => {
               setIsSearching(false);
+              setBashCalls([]);
               updateData({
                 messages: [
                   ...currentMessages,
@@ -738,6 +805,8 @@ function ChatNode({
       attachedSots,
       data.webSearch,
       updateData,
+      sessionName,
+      id,
     ],
   );
 
@@ -890,6 +959,12 @@ function ChatNode({
                 </div>
               ) : (
                 <div key={i}>
+                  {msg.toolCalls && msg.toolCalls.length > 0 && !isLastAssistant && (
+                    <ToolCallsDisplay calls={msg.toolCalls} />
+                  )}
+                  {isLastAssistant && bashCalls.length > 0 && (
+                    <ToolCallsDisplay calls={bashCalls} />
+                  )}
                   <div className={`prose prose-xs max-w-none text-xs leading-relaxed text-fg-dim ${isLastAssistant ? "streaming-prose" : ""}`}>
                     <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>
                       {msg.content}
@@ -907,7 +982,7 @@ function ChatNode({
                 Searching the web…
               </div>
             )}
-            {data.isStreaming && !isSearching && (
+            {data.isStreaming && !isSearching && bashCalls.length === 0 && (
               <span className="inline-block w-1.5 h-3.5 bg-fg-muted animate-pulse" />
             )}
             <div ref={messagesEndRef} />
@@ -1030,6 +1105,12 @@ function ChatNode({
                     </div>
                   ) : (
                     <div key={i}>
+                      {msg.toolCalls && msg.toolCalls.length > 0 && !isLastAssistant && (
+                        <ToolCallsDisplay calls={msg.toolCalls} />
+                      )}
+                      {isLastAssistant && bashCalls.length > 0 && (
+                        <ToolCallsDisplay calls={bashCalls} />
+                      )}
                       <div className={`prose prose-xs max-w-none text-xs leading-relaxed text-fg-dim ${isLastAssistant ? "streaming-prose" : ""}`}>
                         <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>{msg.content}</ReactMarkdown>
                       </div>
@@ -1043,7 +1124,7 @@ function ChatNode({
                     Searching the web…
                   </div>
                 )}
-                {data.isStreaming && !isSearching && (
+                {data.isStreaming && !isSearching && bashCalls.length === 0 && (
                   <span className="inline-block w-1.5 h-3.5 bg-fg-muted animate-pulse" />
                 )}
               </div>

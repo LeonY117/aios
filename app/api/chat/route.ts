@@ -1,13 +1,15 @@
-import { streamText, type ModelMessage } from "ai";
+import { streamText, stepCountIs, type ModelMessage } from "ai";
 import { getModel, getToolsForModel, MODELS } from "@/lib/ai/models";
 import { buildSystemPrompt, buildBtwPrompt, type SotContext } from "@/lib/ai/system-prompt";
 import { withSystemCacheBreakpoint, withHistoryCacheBreakpoint } from "@/lib/ai/prompt-cache";
+import { buildWorkspaceBashTool } from "@/lib/ai/workspace-bash";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export type StreamEvent =
   | { type: "text"; text: string }
-  | { type: "tool-call"; toolName: string }
+  | { type: "tool-call"; toolName: string; input?: Record<string, unknown> }
+  | { type: "tool-result"; toolName: string; result: string }
   | { type: "source"; url: string; title?: string }
   | { type: "error"; message: string };
 
@@ -26,12 +28,16 @@ export async function POST(req: Request) {
       attachedSots = [],
       webSearch = true,
       btw,
+      sessionName,
+      chatNodeId,
     } = body as {
       messages: ModelMessage[];
       modelId: string;
       attachedSots?: SotContext[];
       webSearch?: boolean;
       btw?: { selectedText: string };
+      sessionName?: string;
+      chatNodeId?: string;
     };
 
     const config = MODELS.find((m) => m.id === modelId);
@@ -40,18 +46,25 @@ export async function POST(req: Request) {
     }
 
     const model = getModel(modelId);
+    const hasWorkspace = !!sessionName && !!chatNodeId;
     const rawSystem = btw
       ? buildBtwPrompt(btw.selectedText)
-      : buildSystemPrompt(attachedSots);
+      : buildSystemPrompt(attachedSots, { workspaceBash: hasWorkspace });
     const system = withSystemCacheBreakpoint(rawSystem, config.provider);
     const cachedMessages = withHistoryCacheBreakpoint(messages, config.provider);
     const tools = getToolsForModel(config, { webSearch });
+
+    if (hasWorkspace) {
+      const wsTools = await buildWorkspaceBashTool(sessionName, chatNodeId);
+      Object.assign(tools, wsTools);
+    }
 
     const result = streamText({
       model,
       system,
       messages: cachedMessages,
       tools,
+      ...(hasWorkspace ? { stopWhen: stepCountIs(10) } : {}),
       onError({ error }) {
         console.error("[chat/route] streamText error:", error);
       },
@@ -73,7 +86,23 @@ export async function POST(req: Request) {
             break;
           case "tool-call":
             controller.enqueue(
-              formatEvent({ type: "tool-call", toolName: chunk.toolName }),
+              formatEvent({
+                type: "tool-call",
+                toolName: chunk.toolName,
+                input: chunk.input as Record<string, unknown>,
+              }),
+            );
+            break;
+          case "tool-result":
+            controller.enqueue(
+              formatEvent({
+                type: "tool-result",
+                toolName: chunk.toolName,
+                result:
+                  typeof chunk.output === "string"
+                    ? chunk.output
+                    : JSON.stringify(chunk.output),
+              }),
             );
             break;
           case "source":

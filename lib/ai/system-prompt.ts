@@ -39,12 +39,35 @@ Rules:
 - If you don't know, say so plainly.
 - Use markdown sparingly — backticks for code, no headers. Use a list only when genuinely needed.`;
 
+const WORKSPACE_BASH_GUIDANCE = `
+
+You can explore the full workspace using a bash tool. The workspace contains all blocks (notes, documents, conversations) from the current canvas as readable files.
+
+To discover what's available, run: cat _index.md
+Then use cat, grep, head, wc, or other standard commands to read and search specific files.
+
+Use this when:
+- The user asks about something that might be in other workspace blocks
+- You need to cross-reference information across multiple sources
+- The user asks you to search or find something in the workspace
+
+You don't need to read the workspace for every message — only when it would genuinely help.`;
+
 /**
  * Build the full system prompt with attached SOT context injected.
  */
-export function buildSystemPrompt(attachedSots: SotContext[] = []): string {
+export function buildSystemPrompt(
+  attachedSots: SotContext[] = [],
+  options?: { workspaceBash?: boolean },
+): string {
+  let prompt = BASE_PROMPT;
+
+  if (options?.workspaceBash) {
+    prompt += WORKSPACE_BASH_GUIDANCE;
+  }
+
   if (attachedSots.length === 0) {
-    return BASE_PROMPT;
+    return prompt;
   }
 
   const contextBlocks = attachedSots
@@ -54,7 +77,7 @@ export function buildSystemPrompt(attachedSots: SotContext[] = []): string {
     )
     .join("\n\n");
 
-  return `${BASE_PROMPT}
+  return `${prompt}
 
 The user has attached the following context to this conversation:
 
