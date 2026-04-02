@@ -16,6 +16,10 @@ type BtwPanelProps = {
   /** Viewport Y bottom of the selection */
   anchorY: number;
   modelId?: string;
+  /** Plain-text content of the source node (for surrounding context). */
+  nodeContent?: string;
+  /** Title of the source node. */
+  nodeTitle?: string;
   onClose: () => void;
   onKeep?: (messages: ChatMessage[]) => void;
 };
@@ -27,6 +31,8 @@ export default function BtwPanel({
   anchorX,
   anchorY,
   modelId,
+  nodeContent,
+  nodeTitle,
   onClose,
   onKeep,
 }: BtwPanelProps) {
@@ -114,7 +120,7 @@ export default function BtwPanel({
           attachedSots: [],
           webSearch: false,
           signal: abortController.signal,
-          btw: { selectedText },
+          btw: { selectedText, nodeContent, nodeTitle },
         },
         {
           onTextDelta: (fullContent) => {
@@ -146,7 +152,7 @@ export default function BtwPanel({
     } catch {
       setIsStreaming(false);
     }
-  }, [input, isStreaming, messages, selectedText, modelId]);
+  }, [input, isStreaming, messages, selectedText, modelId, nodeContent, nodeTitle]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

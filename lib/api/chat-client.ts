@@ -32,7 +32,7 @@ export type ChatStreamOptions = {
   attachedSots: { title: string; content: string; sourceType: string }[];
   webSearch: boolean;
   signal?: AbortSignal;
-  btw?: { selectedText: string };
+  btw?: { selectedText: string; nodeContent?: string; nodeTitle?: string };
   sessionName?: string;
   chatNodeId?: string;
 };

@@ -1,6 +1,7 @@
 "use client";
 
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Editor } from "@tiptap/react";
 import {
   NodeResizer,
   useReactFlow,
@@ -146,6 +147,15 @@ function SotCardNode({
     [id, setNodes],
   );
 
+  // Refs for moving editor DOM between inline and portal without unmounting
+  const editorWrapperRef = useRef<HTMLDivElement>(null);
+  const portalSlotRef = useRef<HTMLDivElement>(null);
+  const tiptapEditorRef = useRef<Editor | null>(null);
+  const handleEditorReady = useCallback((editor: Editor | null) => {
+    tiptapEditorRef.current = editor;
+  }, []);
+  const inlineSlotRef = useRef<HTMLDivElement>(null);
+
   const handleViewModeChange = useCallback(
     (viewMode: NodeViewMode) => {
       setNodes((nds) => {
@@ -166,6 +176,28 @@ function SotCardNode({
   );
 
   const viewMode = data.viewMode ?? "normal";
+
+  // Move the editor DOM node between inline and portal slots without unmounting.
+  // The editor's React tree stays mounted — only the physical DOM parent changes.
+  // After moving, re-focus the editor so the cursor reappears in its original position.
+  useEffect(() => {
+    const wrapper = editorWrapperRef.current;
+    if (!wrapper || !isRichText) return;
+    let moved = false;
+    if (viewMode === "maximized" && portalSlotRef.current) {
+      portalSlotRef.current.appendChild(wrapper);
+      moved = true;
+    } else if (inlineSlotRef.current && wrapper.parentElement !== inlineSlotRef.current) {
+      inlineSlotRef.current.appendChild(wrapper);
+      moved = true;
+    }
+    // After DOM move, ProseMirror loses focus — restore it without changing selection
+    if (moved && tiptapEditorRef.current && !tiptapEditorRef.current.isDestroyed) {
+      requestAnimationFrame(() => {
+        tiptapEditorRef.current?.view.focus();
+      });
+    }
+  }, [viewMode, isRichText]);
 
   const wordCount = useMemo(() => {
     if (!data.content) return 0;
@@ -234,13 +266,18 @@ function SotCardNode({
       />
     </div>
   ) : isRichText ? (
-    <div ref={btwContainerRef} onMouseUp={handleBtwMouseUp} className="nodrag min-h-0 flex-1 overflow-hidden cursor-text flex flex-col">
-      <RichTextEditor
-        content={data.content}
-        onChange={handleContentChange}
-        autoFocus={!!data.isEditing}
-        selected={selected}
-      />
+    <div ref={btwContainerRef} onMouseUp={handleBtwMouseUp} className={`nodrag min-h-0 flex-1 overflow-hidden cursor-text flex flex-col ${viewMode === "maximized" ? "!h-0 !min-h-0 !overflow-hidden" : ""}`}>
+      <div ref={inlineSlotRef} className="flex min-h-0 flex-1 flex-col">
+        <div ref={editorWrapperRef} className="flex min-h-0 flex-1 flex-col">
+          <RichTextEditor
+            content={data.content}
+            onChange={handleContentChange}
+            autoFocus={!!data.isEditing}
+            selected={selected}
+            onEditor={handleEditorReady}
+          />
+        </div>
+      </div>
     </div>
   ) : (
     <div ref={btwContainerRef} onMouseUp={handleBtwMouseUp} className={`${selected ? "nowheel" : ""} min-h-0 flex-1 overflow-y-auto px-4 pb-3 cursor-text`}>
@@ -265,11 +302,11 @@ function SotCardNode({
           <MinimizedNodeView title={data.title} wordCount={wordCount} viewMode={viewMode} onViewModeChange={handleViewModeChange} />
         ) : (
           <>
-            <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
+            <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing" onDoubleClick={() => handleViewModeChange("minimized")}>
               <div className={`h-[3px] w-6 rounded-full bg-handle ${hoverReveal}`} />
             </div>
             {header}
-            {viewMode !== "maximized" && contentSection}
+            {contentSection}
           </>
         )}
       </div>
@@ -332,11 +369,15 @@ function SotCardNode({
               </span>
             </div>
           )}
-          {contentSection}
+          <div ref={portalSlotRef} className="nodrag min-h-0 flex-1 overflow-hidden cursor-text flex flex-col" />
         </MaximizePortal>
       )}
 
-      <BtwOverlay {...btw} />
+      <BtwOverlay
+        {...btw}
+        nodeTitle={data.title}
+        nodeContent={data.content?.replace(/<[^>]*>/g, "") ?? ""}
+      />
     </>
   );
 }

@@ -12,6 +12,8 @@ type BtwOverlayProps = {
   closePanel: () => void;
   handleKeep: (messages: ChatMessage[]) => void;
   modelId?: string;
+  nodeContent?: string;
+  nodeTitle?: string;
 };
 
 /** Shared btw tooltip + panel rendering used by any node that supports text selection. */
@@ -22,6 +24,8 @@ export default function BtwOverlay({
   closePanel,
   handleKeep,
   modelId,
+  nodeContent,
+  nodeTitle,
 }: BtwOverlayProps) {
   if (!btwTooltip) return null;
 
@@ -40,6 +44,8 @@ export default function BtwOverlay({
           anchorX={btwTooltip.x}
           anchorY={btwTooltip.bottomY}
           modelId={modelId}
+          nodeContent={nodeContent}
+          nodeTitle={nodeTitle}
           onKeep={handleKeep}
           onClose={closePanel}
         />

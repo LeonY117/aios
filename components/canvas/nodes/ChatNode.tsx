@@ -942,7 +942,7 @@ function ChatNode({
         {viewMode === "minimized" ? (
           <MinimizedNodeView title={data.title} wordCount={wordCount} viewMode={viewMode} onViewModeChange={handleViewModeChange} />
         ) : (<>
-        <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
+        <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing" onDoubleClick={() => handleViewModeChange("minimized")}>
           <div className={`h-[3px] w-6 rounded-full bg-handle transition-opacity duration-150 ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`} />
         </div>
 
@@ -1203,7 +1203,12 @@ function ChatNode({
         </MaximizePortal>
       )}
 
-      <BtwOverlay {...btw} modelId={data.modelId} />
+      <BtwOverlay
+        {...btw}
+        modelId={data.modelId}
+        nodeTitle={data.title}
+        nodeContent={(data.messages ?? []).map((m) => `${m.role}: ${m.content}`).join("\n\n")}
+      />
     </>
   );
 }

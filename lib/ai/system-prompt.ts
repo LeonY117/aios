@@ -29,12 +29,14 @@ export type SotContext = {
 // Perplexity (ban filler/hedging), Cursor (lean prompt, no repetition).
 // ---------------------------------------------------------------------------
 
-const BTW_PROMPT = `You are a concise Q&A assistant. The user selected text and is asking a quick question about it.
+const BTW_PROMPT = `You are a concise Q&A assistant. The user highlighted text and is asking a quick question about it.
+
+The excerpt below shows surrounding context with the user's selection wrapped in <highlighted> tags.
 
 Rules:
 - Answer in 1–3 sentences unless the user explicitly asks for more.
 - Be direct. No preamble, no hedging, no filler ("Great question!", "It's worth noting…").
-- Do not repeat or paraphrase the selected text back.
+- Do not repeat or paraphrase the highlighted text back.
 - Do not apologize or add caveats.
 - If you don't know, say so plainly.
 - Use markdown sparingly — backticks for code, no headers. Use a list only when genuinely needed.`;
@@ -88,14 +90,50 @@ ${contextBlocks}
 Use this context to inform your responses. Reference sources by their title when applicable.`;
 }
 
+export type BtwContext = {
+  selectedText: string;
+  /** Full plain-text content of the node the selection lives in. */
+  nodeContent?: string;
+  /** Title of the source node (e.g. "Slack: Q3 planning"). */
+  nodeTitle?: string;
+};
+
+const SURROUNDING_CHARS = 300;
+
 /**
  * Build the system prompt for BTW quick-ask panels.
- * The selected excerpt is injected as a single context block.
+ *
+ * When `nodeContent` is provided we extract a ±300-char window around the
+ * selection and wrap it with `<highlighted>…</highlighted>` so the model
+ * knows exactly which part the user selected.
  */
-export function buildBtwPrompt(selectedText: string): string {
+export function buildBtwPrompt(ctx: BtwContext): string {
+  const { selectedText, nodeContent, nodeTitle } = ctx;
+
+  let excerpt: string;
+
+  if (nodeContent) {
+    const idx = nodeContent.indexOf(selectedText);
+    if (idx !== -1) {
+      const before = nodeContent.slice(Math.max(0, idx - SURROUNDING_CHARS), idx);
+      const after = nodeContent.slice(
+        idx + selectedText.length,
+        idx + selectedText.length + SURROUNDING_CHARS,
+      );
+      excerpt = `${before ? "…" + before : ""}<highlighted>${selectedText}</highlighted>${after ? after + "…" : ""}`;
+    } else {
+      // Selection didn't match (e.g. whitespace differences) — fall back
+      excerpt = `<highlighted>${selectedText}</highlighted>`;
+    }
+  } else {
+    excerpt = `<highlighted>${selectedText}</highlighted>`;
+  }
+
+  const titleLine = nodeTitle ? `Source: "${nodeTitle}"\n\n` : "";
+
   return `${BTW_PROMPT}
 
-<selected_text>
-${selectedText}
-</selected_text>`;
+${titleLine}<excerpt>
+${excerpt}
+</excerpt>`;
 }

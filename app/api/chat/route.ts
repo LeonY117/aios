@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       modelId: string;
       attachedSots?: SotContext[];
       webSearch?: boolean;
-      btw?: { selectedText: string };
+      btw?: { selectedText: string; nodeContent?: string; nodeTitle?: string };
       sessionName?: string;
       chatNodeId?: string;
     };
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
     const model = getModel(modelId);
     const hasWorkspace = !!sessionName && !!chatNodeId;
     const rawSystem = btw
-      ? buildBtwPrompt(btw.selectedText)
+      ? buildBtwPrompt(btw)
       : buildSystemPrompt(attachedSots, { workspaceBash: hasWorkspace });
     const system = withSystemCacheBreakpoint(rawSystem, config.provider);
     const cachedMessages = withHistoryCacheBreakpoint(messages, config.provider);
