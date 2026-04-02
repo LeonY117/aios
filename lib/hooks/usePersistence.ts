@@ -108,10 +108,19 @@ export function usePersistence(
 
   // --- Viewport tracking ---
 
+  // Track viewport position without triggering save on every pan/zoom frame.
+  // Viewport data is included in the next save triggered by a real change
+  // (node move, content edit, etc.).  We use a separate trailing timer so
+  // viewport-only changes (user just pans around) still persist eventually.
+  const vpSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onViewportChange = useCallback(
     (vp: Viewport) => {
       viewportRef.current = vp;
-      if (loaded) triggerDebouncedSave();
+      if (!loaded) return;
+      if (vpSaveTimerRef.current) clearTimeout(vpSaveTimerRef.current);
+      vpSaveTimerRef.current = setTimeout(() => {
+        triggerDebouncedSave();
+      }, 1000);
     },
     [triggerDebouncedSave, loaded],
   );

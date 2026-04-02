@@ -6,7 +6,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
 import TaskList from "@tiptap/extension-task-list";
 import { Markdown } from "@tiptap/markdown";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import type { Editor } from "@tiptap/react";
 import { clearPendingEditorFocus } from "@/lib/editor-focus-signal";
 import { CustomTaskItem, ListBehaviorFix } from "./list-extensions";
@@ -88,6 +88,27 @@ export default function RichTextEditor({
     onEditorRef.current = onEditor;
   }, [onEditor]);
 
+  // Debounce onUpdate: getMarkdown() serializes the full document and the
+  // callback triggers setNodes → full React Flow re-render.  Debouncing keeps
+  // typing responsive while still syncing state at ~3 Hz.
+  const updateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingEditorRef = useRef<Editor | null>(null);
+
+  const flushUpdate = useCallback(() => {
+    if (updateTimerRef.current) {
+      clearTimeout(updateTimerRef.current);
+      updateTimerRef.current = null;
+    }
+    const e = pendingEditorRef.current;
+    if (e && !e.isDestroyed) {
+      onChangeRef.current(e.getMarkdown());
+      pendingEditorRef.current = null;
+    }
+  }, []);
+
+  // Flush pending content on unmount so nothing is lost
+  useEffect(() => () => flushUpdate(), [flushUpdate]);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -106,7 +127,9 @@ export default function RichTextEditor({
       onEditorRef.current?.(e);
     },
     onUpdate: ({ editor: e }) => {
-      onChangeRef.current(e.getMarkdown());
+      pendingEditorRef.current = e;
+      if (updateTimerRef.current) clearTimeout(updateTimerRef.current);
+      updateTimerRef.current = setTimeout(flushUpdate, 300);
     },
     editorProps: {
       attributes: {

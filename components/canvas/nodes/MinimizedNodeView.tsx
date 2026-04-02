@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import type { NodeViewMode } from "@/types";
 import NodeWindowControls from "./NodeWindowControls";
@@ -11,7 +12,7 @@ type MinimizedNodeViewProps = {
   onViewModeChange: (mode: NodeViewMode) => void;
 };
 
-export default function MinimizedNodeView({
+export default memo(function MinimizedNodeView({
   title,
   wordCount,
   viewMode,
@@ -57,4 +58,4 @@ export default function MinimizedNodeView({
       </div>
     </div>
   );
-}
+});

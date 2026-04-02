@@ -867,6 +867,11 @@ function ChatNode({
 
   const viewMode = data.viewMode ?? "normal";
 
+  const btwContent = useMemo(
+    () => (data.messages ?? []).map((m) => `${m.role}: ${m.content}`).join("\n\n"),
+    [data.messages],
+  );
+
   const wordCount = useMemo(() => {
     const msgs = data.messages ?? [];
     const text = msgs.map((m) => m.content).join(" ");
@@ -1196,7 +1201,7 @@ function ChatNode({
         {...btw}
         modelId={data.modelId}
         nodeTitle={data.title}
-        nodeContent={(data.messages ?? []).map((m) => `${m.role}: ${m.content}`).join("\n\n")}
+        nodeContent={btwContent}
       />
     </>
   );

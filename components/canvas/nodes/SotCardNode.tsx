@@ -187,14 +187,16 @@ function SotCardNode({
     }
   }, [viewMode, isRichText]);
 
+  const strippedContent = useMemo(
+    () => data.content?.replace(/<[^>]*>/g, "") ?? "",
+    [data.content],
+  );
+
   const wordCount = useMemo(() => {
-    if (!data.content) return 0;
-    // Strip markdown syntax and any remaining HTML tags, then count words
-    const text = data.content
-      .replace(/<[^>]*>/g, " ")
-      .replace(/[#*_~`\[\]()>+|\\-]/g, " ");
+    if (!strippedContent) return 0;
+    const text = strippedContent.replace(/[#*_~`\[\]()>+|\\-]/g, " ");
     return text.split(/\s+/).filter(Boolean).length;
-  }, [data.content]);
+  }, [strippedContent]);
 
   if (data.isLoading) {
     return (
@@ -364,7 +366,7 @@ function SotCardNode({
       <BtwOverlay
         {...btw}
         nodeTitle={data.title}
-        nodeContent={data.content?.replace(/<[^>]*>/g, "") ?? ""}
+        nodeContent={strippedContent}
       />
     </>
   );
