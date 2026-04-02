@@ -73,7 +73,7 @@ const edgeTypes = {
   center: CenterEdge,
 };
 
-function CanvasInner({ workspace }: { workspace: string }) {
+function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorkspace: (name: string) => void }) {
   const { theme } = useTheme();
   const router = useRouter();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -132,38 +132,61 @@ function CanvasInner({ workspace }: { workspace: string }) {
 
   // --- Workspace management ---
 
+  /** Switch to a workspace without a full page navigation. */
+  function navigateToWorkspace(name: string) {
+    setWorkspace(name);
+    window.history.pushState(null, "", "/" + encodeURIComponent(name));
+  }
+
+  /** Find the most recently edited non-archived workspace (excluding `skip`). */
+  async function findNextWorkspace(skip: string): Promise<string | null> {
+    try {
+      const res = await fetch("/api/session/list");
+      const { sessions } = (await res.json()) as { sessions: { name: string; archived: boolean }[] };
+      const next = sessions.find((s) => !s.archived && s.name !== skip);
+      return next?.name ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async function handleSwitch(name: string) {
     flushDebouncedSave();
     await saveSession(workspace, nodesRef.current.filter((n) => n.id !== GROUP_CONNECTOR_ID), edgesRef.current, viewportRef.current);
-    router.push("/" + encodeURIComponent(name));
+    navigateToWorkspace(name);
   }
 
   async function handleCreated(name: string) {
     flushDebouncedSave();
     await saveSession(workspace, nodesRef.current.filter((n) => n.id !== GROUP_CONNECTOR_ID), edgesRef.current, viewportRef.current);
     await createSession(name);
-    router.push("/" + encodeURIComponent(name));
+    navigateToWorkspace(name);
   }
 
   const handleDeleted = useCallback(
     async (name: string) => {
       await deleteSession(name);
       if (name === workspace) {
-        router.refresh();
-        router.push("/");
+        const next = await findNextWorkspace(name);
+        if (next) {
+          navigateToWorkspace(next);
+        } else {
+          router.push("/");
+        }
       }
     },
-    [workspace, router],
+    [workspace, router, setWorkspace],
   );
 
   const handleRenamed = useCallback(
     async (oldName: string, newName: string) => {
       await renameSession(oldName, newName);
       if (workspace === oldName) {
-        router.replace("/" + encodeURIComponent(newName));
+        setWorkspace(newName);
+        window.history.replaceState(null, "", "/" + encodeURIComponent(newName));
       }
     },
-    [workspace, router],
+    [workspace, setWorkspace],
   );
 
   const handleArchived = useCallback(
@@ -171,14 +194,18 @@ function CanvasInner({ workspace }: { workspace: string }) {
       try {
         await archiveSession(name, archived);
         if (archived && name === workspace) {
-          router.refresh();
-          router.push("/");
+          const next = await findNextWorkspace(name);
+          if (next) {
+            navigateToWorkspace(next);
+          } else {
+            router.push("/");
+          }
         }
       } catch {
         // archiveSession throws on failure — sidebar will re-fetch on next open
       }
     },
-    [workspace, router],
+    [workspace, router, setWorkspace],
   );
 
   // Auto-save on node changes
@@ -466,7 +493,19 @@ function CanvasInner({ workspace }: { workspace: string }) {
   );
 }
 
-export default function Canvas({ workspace }: { workspace: string }) {
+export default function Canvas({ workspace: initialWorkspace }: { workspace: string }) {
+  const [workspace, setWorkspace] = useState(initialWorkspace);
+
+  // Handle browser back/forward — sync state from URL
+  useEffect(() => {
+    const onPopState = () => {
+      const path = decodeURIComponent(window.location.pathname.slice(1));
+      if (path && path !== workspace) setWorkspace(path);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [workspace]);
+
   return (
     <div className="relative w-screen h-dvh">
       {/* Override library z-index so edges/connection line render behind nodes */}
@@ -500,7 +539,7 @@ export default function Canvas({ workspace }: { workspace: string }) {
         }
       `}</style>
       <ReactFlowProvider>
-        <CanvasInner workspace={workspace} />
+        <CanvasInner workspace={workspace} setWorkspace={setWorkspace} />
       </ReactFlowProvider>
     </div>
   );
