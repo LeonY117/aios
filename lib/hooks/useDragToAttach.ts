@@ -11,6 +11,7 @@ import {
 import { GROUP_CONNECTOR_ID } from "@/lib/canvas/constants";
 import { viewportCenter, topZIndex } from "@/lib/nodes";
 import { soloSelect, addEdgesFromSots } from "@/lib/canvas/actions";
+import { cloneNodes } from "@/lib/canvas/clone-nodes";
 import type { ChatNodeData } from "@/types";
 
 type MutableRef<T> = { current: T };
@@ -22,12 +23,14 @@ type MutableRef<T> = { current: T };
  */
 export function useDragToAttach(
   nodesRef: MutableRef<Node[]>,
+  edgesRef: MutableRef<Edge[]>,
   nodes: Node[],
   setNodes: (updater: Node[] | ((prev: Node[]) => Node[])) => void,
   setEdges: (updater: Edge[] | ((prev: Edge[]) => Edge[])) => void,
   screenToFlowPosition: (pos: { x: number; y: number }) => { x: number; y: number },
   triggerDebouncedSave: () => void,
   loaded: boolean,
+  sessionName: string,
 ) {
   // Snapshot of selected SOTs -- captured before deselection so drag-to-attach works
   const dragSelectionRef = useRef<Node[]>([]);
@@ -105,16 +108,43 @@ export function useDragToAttach(
   );
 
   // Refresh the snapshot at drag start as a fallback (e.g. single-node drag
-  // without prior deselection).
-  const onNodeDragStart = useCallback(() => {
-    if (dragSelectionRef.current.length === 0) {
-      dragSelectionRef.current = nodesRef.current.filter(
-        (n) =>
-          n.selected &&
-          (n.type === "sotCard" || n.type === "contextBlock"),
-      );
-    }
-  }, [nodesRef]);
+  // without prior deselection). Alt+drag clones selected nodes in-place.
+  const onNodeDragStart = useCallback(
+    (event: React.MouseEvent, _node: Node, _draggedNodes: Node[]) => {
+      if (dragSelectionRef.current.length === 0) {
+        dragSelectionRef.current = nodesRef.current.filter(
+          (n) =>
+            n.selected &&
+            (n.type === "sotCard" || n.type === "contextBlock"),
+        );
+      }
+
+      // Alt+drag: clone selected nodes (or just the dragged node) at their current positions
+      if (event.altKey) {
+        const dragged = nodesRef.current.find((n) => n.id === _node.id);
+        const selected = nodesRef.current.filter(
+          (n) => n.selected && n.id !== GROUP_CONNECTOR_ID && n.type !== "linkInput",
+        );
+        // If the dragged node isn't in the selection, duplicate just that node
+        const toCopy = selected.length > 0 && selected.some((n) => n.id === _node.id)
+          ? selected
+          : dragged && dragged.type !== "linkInput" ? [dragged] : [];
+        if (toCopy.length === 0) return;
+        const copyIds = new Set(toCopy.map((n) => n.id));
+        const relevantEdges = edgesRef.current.filter(
+          (e) => copyIds.has(e.source) && copyIds.has(e.target),
+        );
+        const { nodes: clonedNodes, edges: clonedEdges } = cloneNodes(
+          toCopy, relevantEdges, { x: 0, y: 0 },
+        );
+        // Insert clones unselected at original positions — user drags originals away
+        setNodes((nds) => [...nds, ...clonedNodes.map((n) => ({ ...n, selected: false }))]);
+        setEdges((eds) => [...eds, ...clonedEdges]);
+        if (loaded) triggerDebouncedSave();
+      }
+    },
+    [nodesRef, edgesRef, setNodes, setEdges, loaded, triggerDebouncedSave],
+  );
 
   // When dragged SOT nodes are dropped onto a chat, create edges for all of them
   const onNodeDragStop = useCallback(

@@ -33,6 +33,9 @@ export function useSpacePan() {
       if (e.key === "Shift") {
         document.body.classList.add("shift-held");
       }
+      if (e.key === "Alt") {
+        document.body.classList.add("alt-held");
+      }
     };
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.code === "Space") {
@@ -43,6 +46,9 @@ export function useSpacePan() {
       if (e.key === "Shift") {
         document.body.classList.remove("shift-held");
       }
+      if (e.key === "Alt") {
+        document.body.classList.remove("alt-held");
+      }
     };
     const onBlur = () => {
       setIsSpaceHeld(false);
@@ -51,6 +57,7 @@ export function useSpacePan() {
         "space-held",
         "space-dragging",
         "shift-held",
+        "alt-held",
       );
     };
     window.addEventListener("keydown", onKeyDown);
@@ -64,6 +71,7 @@ export function useSpacePan() {
         "space-held",
         "space-dragging",
         "shift-held",
+        "alt-held",
       );
     };
   }, []);

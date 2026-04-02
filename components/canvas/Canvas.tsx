@@ -46,6 +46,9 @@ import {
 } from "@/lib/nodes";
 import { useTheme } from "@/lib/themes";
 import { selectAllSots } from "@/lib/canvas/actions";
+import { cloneNodes } from "@/lib/canvas/clone-nodes";
+import { setClipboard, getClipboard, incrementPasteCount } from "@/lib/canvas/internal-clipboard";
+import { topZIndex } from "@/lib/nodes";
 import { WorkspaceProvider } from "@/lib/ai/workspace-context";
 import { useRouter } from "next/navigation";
 import {
@@ -124,7 +127,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
     chatNodes,
     attachToChat,
     newChatWithContext,
-  } = useDragToAttach(nodesRef, nodes, setNodes, setEdges, screenToFlowPosition, triggerDebouncedSave, loaded);
+  } = useDragToAttach(nodesRef, edgesRef, nodes, setNodes, setEdges, screenToFlowPosition, triggerDebouncedSave, loaded, workspace);
 
   // --- Workspace management ---
 
@@ -302,6 +305,49 @@ function CanvasInner({ workspace }: { workspace: string }) {
     input.click();
   }, [addFileNode]);
 
+  const copyNodes = useCallback(() => {
+    const selected = nodesRef.current.filter(
+      (n) => n.selected && n.id !== GROUP_CONNECTOR_ID && n.type !== "linkInput",
+    );
+    if (selected.length === 0) return;
+    const selectedIds = new Set(selected.map((n) => n.id));
+    const relevantEdges = edgesRef.current.filter(
+      (e) => selectedIds.has(e.source) && selectedIds.has(e.target),
+    );
+    setClipboard(selected, relevantEdges);
+  }, [nodesRef, edgesRef]);
+
+  const cutNodes = useCallback(() => {
+    copyNodes();
+    const selected = nodesRef.current.filter(
+      (n) => n.selected && n.id !== GROUP_CONNECTOR_ID,
+    );
+    if (selected.length === 0) return;
+    const changes: NodeChange<Node>[] = selected.map((n) => ({ type: "remove" as const, id: n.id }));
+    handleNodesChange(changes);
+    const removedIds = new Set(selected.map((n) => n.id));
+    setEdges((eds) => eds.filter((e) => !removedIds.has(e.source) && !removedIds.has(e.target)));
+    if (loaded) triggerDebouncedSave();
+  }, [copyNodes, nodesRef, handleNodesChange, setEdges, loaded, triggerDebouncedSave]);
+
+  const pasteNodes = useCallback((): boolean => {
+    const clip = getClipboard();
+    if (!clip) return false;
+    incrementPasteCount();
+    const offset = clip.pasteCount * 40;
+    const { nodes: clonedNodes, edges: clonedEdges } = cloneNodes(
+      clip.nodes, clip.edges, { x: offset, y: offset },
+    );
+    setNodes((nds) => {
+      const deselected = nds.map((n) => (n.selected ? { ...n, selected: false } : n));
+      const z = topZIndex(deselected);
+      return [...deselected, ...clonedNodes.map((n, i) => ({ ...n, zIndex: z + i + 1 }))];
+    });
+    setEdges((eds) => [...eds, ...clonedEdges]);
+    if (loaded) triggerDebouncedSave();
+    return true;
+  }, [setNodes, setEdges, loaded, triggerDebouncedSave]);
+
   useKeyboardShortcuts(
     useMemo(
       () => ({
@@ -313,8 +359,11 @@ function CanvasInner({ workspace }: { workspace: string }) {
         flushDebouncedSave,
         selectAll,
         toggleCommandPalette,
+        copyNodes,
+        cutNodes,
+        pasteNodes,
       }),
-      [addTextBlock, addLinkNode, addChatNode, addContextBlock, doSave, flushDebouncedSave, selectAll, toggleCommandPalette],
+      [addTextBlock, addLinkNode, addChatNode, addContextBlock, doSave, flushDebouncedSave, selectAll, toggleCommandPalette, copyNodes, cutNodes, pasteNodes],
     ),
   );
 
@@ -344,6 +393,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
           style: { stroke: "var(--edge)" },
         }}
         connectionLineComponent={CenterConnectionLine}
+        deleteKeyCode={["Backspace", "Delete"]}
         selectionOnDrag={!isSpaceHeld}
         selectionKeyCode={null}
         multiSelectionKeyCode="Shift"

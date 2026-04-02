@@ -11,6 +11,10 @@ type ShortcutActions = {
   flushDebouncedSave: () => void;
   selectAll: () => void;
   toggleCommandPalette: () => void;
+  copyNodes: () => void;
+  cutNodes: () => void;
+  /** Returns true if internal clipboard had content (paste was handled). */
+  pasteNodes: () => boolean;
 };
 
 /**
@@ -84,6 +88,38 @@ export function useKeyboardShortcuts(actions: ShortcutActions) {
         }
         e.preventDefault();
         actions.selectAll();
+        return;
+      }
+
+      // Cmd+C / Cmd+X / Cmd+V — clipboard operations (skip if input is focused)
+      if (e.key === "c" || e.key === "x" || e.key === "v") {
+        const active = document.activeElement;
+        if (
+          active instanceof HTMLInputElement ||
+          active instanceof HTMLTextAreaElement ||
+          (active instanceof HTMLElement && active.isContentEditable)
+        ) {
+          return;
+        }
+
+        if (e.key === "c") {
+          e.preventDefault();
+          actions.copyNodes();
+          return;
+        }
+        if (e.key === "x") {
+          e.preventDefault();
+          actions.cutNodes();
+          return;
+        }
+        // Cmd+V: only preventDefault if internal clipboard had content,
+        // otherwise let the native paste event propagate to useCanvasPaste.
+        if (e.key === "v") {
+          if (actions.pasteNodes()) {
+            e.preventDefault();
+          }
+          return;
+        }
       }
     };
     window.addEventListener("keydown", handler);

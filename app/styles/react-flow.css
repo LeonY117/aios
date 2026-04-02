@@ -99,3 +99,11 @@ body.shift-held .tiptap {
   -moz-user-select: none !important;
   user-select: none !important;
 }
+
+/* Alt+drag: copy cursor on nodes to hint at duplication */
+body.alt-held .react-flow__node,
+body.alt-held .react-flow__node.selectable,
+body.alt-held .react-flow__node.draggable,
+body.alt-held .custom-drag-handle {
+  cursor: copy !important;
+}
