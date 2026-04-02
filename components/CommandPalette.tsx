@@ -9,6 +9,7 @@ import {
 } from "react";
 import type { SessionEntry } from "@/lib/persistence";
 import { useTheme, themeList } from "@/lib/themes";
+import { ArchiveBoxIcon, DeleteIcon, RenameIcon } from "@/components/icons";
 
 type CommandPaletteProps = {
   open: boolean;
@@ -21,9 +22,12 @@ type CommandPaletteProps = {
   onAddLinkNode: () => void;
   onAddContextBlock: () => void;
   onAddFile: () => void;
+  onArchiveWorkspace: (name: string, archived: boolean) => void;
+  onDeleteWorkspace: (name: string) => void;
+  onRenameWorkspace: (oldName: string, newName: string) => void;
 };
 
-type View = "main" | "theme" | "shortcuts" | "create";
+type View = "main" | "theme" | "shortcuts" | "create" | "rename" | "confirm-delete";
 
 type PaletteItem = {
   id: string;
@@ -157,6 +161,9 @@ export default function CommandPalette({
   onAddLinkNode,
   onAddContextBlock,
   onAddFile,
+  onArchiveWorkspace,
+  onDeleteWorkspace,
+  onRenameWorkspace,
 }: CommandPaletteProps) {
   const { themeId, setTheme } = useTheme();
   const [query, setQuery] = useState("");
@@ -217,6 +224,46 @@ export default function CommandPalette({
       { id: "add-file", title: "Upload File", icon: <FileIcon />, onSelect: () => { onAddFile(); onClose(); } },
     ].map((a) => ({ ...a, type: "action" as const, section: "Canvas Actions" }));
 
+    const workspaceActionItems: PaletteItem[] = [
+      {
+        id: "new-workspace",
+        type: "action",
+        title: "New Workspace",
+        section: "Workspace",
+        icon: <PlusCircleIcon />,
+        onSelect: () => { setView("create"); setNewName(""); },
+      },
+      {
+        id: "archive-workspace",
+        type: "action",
+        title: "Archive Current Workspace",
+        meta: currentSession,
+        section: "Workspace",
+        icon: <ArchiveBoxIcon width={14} height={14} />,
+        onSelect: () => { onArchiveWorkspace(currentSession, true); onClose(); },
+      },
+      {
+        id: "rename-workspace",
+        type: "action",
+        title: "Rename Current Workspace",
+        meta: currentSession,
+        section: "Workspace",
+        icon: <RenameIcon width={14} height={14} />,
+        chevron: true,
+        onSelect: () => { setView("rename"); setNewName(currentSession); setSelectedIndex(0); },
+      },
+      {
+        id: "delete-workspace",
+        type: "action",
+        title: "Delete Current Workspace",
+        meta: currentSession,
+        section: "Workspace",
+        icon: <DeleteIcon width={14} height={14} />,
+        chevron: true,
+        onSelect: () => { setView("confirm-delete"); setSelectedIndex(0); },
+      },
+    ];
+
     const settingItems: PaletteItem[] = [
       {
         id: "theme",
@@ -237,18 +284,10 @@ export default function CommandPalette({
         chevron: true,
         onSelect: () => { setView("shortcuts"); setQuery(""); setSelectedIndex(0); },
       },
-      {
-        id: "new-workspace",
-        type: "setting",
-        title: "Create New Workspace",
-        section: "Settings",
-        icon: <PlusCircleIcon />,
-        onSelect: () => { setView("create"); setNewName(""); },
-      },
     ];
 
-    return [...workspaceItems, ...actionItems, ...settingItems];
-  }, [view, sessions, currentSession, themeId, onSwitchWorkspace, onClose, onAddTextBlock, onAddChatNode, onAddLinkNode, onAddContextBlock, onAddFile]);
+    return [...workspaceItems, ...actionItems, ...workspaceActionItems, ...settingItems];
+  }, [view, sessions, currentSession, themeId, onSwitchWorkspace, onClose, onAddTextBlock, onAddChatNode, onAddLinkNode, onAddContextBlock, onAddFile, onArchiveWorkspace, onDeleteWorkspace, onRenameWorkspace]);
 
   // ── Filter items ─────────────────────────────────────────
 
@@ -307,11 +346,19 @@ export default function CommandPalette({
         return;
       }
 
-      if (view === "shortcuts") return;
+      if (view === "shortcuts" || view === "confirm-delete") return;
 
       if (view === "create") {
         if (e.key === "Enter" && newName.trim()) {
           onCreateWorkspace(newName.trim());
+          onClose();
+        }
+        return;
+      }
+
+      if (view === "rename") {
+        if (e.key === "Enter" && newName.trim() && newName.trim() !== currentSession) {
+          onRenameWorkspace(currentSession, newName.trim());
           onClose();
         }
         return;
@@ -335,7 +382,7 @@ export default function CommandPalette({
         }
       }
     },
-    [view, filteredItems, themeItems, selectedIndex, onClose, setTheme, newName, onCreateWorkspace],
+    [view, filteredItems, themeItems, selectedIndex, onClose, setTheme, newName, onCreateWorkspace, onRenameWorkspace, currentSession],
   );
 
   // Scroll selected item into view
@@ -361,9 +408,9 @@ export default function CommandPalette({
           <span className="text-fg-muted shrink-0"><SearchIcon /></span>
           <input
             ref={inputRef}
-            value={view === "create" ? newName : query}
+            value={view === "create" || view === "rename" ? newName : query}
             onChange={(e) => {
-              if (view === "create") {
+              if (view === "create" || view === "rename") {
                 setNewName(e.target.value);
               } else {
                 setQuery(e.target.value);
@@ -373,8 +420,10 @@ export default function CommandPalette({
             placeholder={
               view === "create"
                 ? "Workspace name..."
-                : view === "theme"
-                  ? "Filter themes..."
+                : view === "rename"
+                  ? "New workspace name..."
+                  : view === "theme"
+                    ? "Filter themes..."
                   : "Search workspaces, actions, settings..."
             }
             className="flex-1 bg-transparent border-none outline-none text-fg text-[15px] placeholder:text-fg-muted"
@@ -543,6 +592,56 @@ export default function CommandPalette({
                   className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
                 >
                   Create
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ─ Rename workspace view ─ */}
+          {view === "rename" && (
+            <div className="px-4 py-6">
+              <p className="text-sm text-fg-dim mb-4">Rename &ldquo;{currentSession}&rdquo; to:</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setView("main"); setQuery(""); }}
+                  className="rounded-lg px-3 py-1.5 text-sm text-fg-muted hover:bg-hover transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (newName.trim() && newName.trim() !== currentSession) {
+                      onRenameWorkspace(currentSession, newName.trim());
+                      onClose();
+                    }
+                  }}
+                  disabled={!newName.trim() || newName.trim() === currentSession}
+                  className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-40 transition-colors"
+                >
+                  Rename
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ─ Confirm delete view ─ */}
+          {view === "confirm-delete" && (
+            <div className="px-4 py-6">
+              <p className="text-sm text-fg-dim mb-4">
+                Are you sure you want to delete <span className="font-medium text-fg">&ldquo;{currentSession}&rdquo;</span>? This cannot be undone.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setView("main"); setQuery(""); }}
+                  className="rounded-lg px-3 py-1.5 text-sm text-fg-muted hover:bg-hover transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { onDeleteWorkspace(currentSession); onClose(); }}
+                  className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 transition-colors"
+                >
+                  Delete
                 </button>
               </div>
             </div>

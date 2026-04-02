@@ -79,29 +79,33 @@ export function usePersistence(
   }, []);
 
   // --- Load ---
+  // Keep old workspace visible until the new one is fully loaded.
+  // We only touch React state once the fetch resolves, and guard
+  // against stale responses if workspace changes again mid-load.
+
+  const loadingWorkspaceRef = useRef<string | null>(null);
 
   const loadCurrentSession = useCallback(async () => {
-    setLoaded(false);
+    const target = workspace;
+    loadingWorkspaceRef.current = target;
+    const session = await loadSession(target);
+    // If workspace changed while we were fetching, discard this result.
+    if (loadingWorkspaceRef.current !== target) return;
     clearContentHashes();
-    const session = await loadSession(workspace);
-    if (session) {
-      setNodes(session.nodes);
-      setEdges(session.edges);
-      setViewport(session.viewport);
-      viewportRef.current = session.viewport;
-    } else {
-      setNodes([]);
-      setEdges([]);
-      setViewport({ x: 0, y: 0, zoom: 1 });
-      viewportRef.current = { x: 0, y: 0, zoom: 1 };
-    }
+    setNodes(session?.nodes ?? []);
+    setEdges(session?.edges ?? []);
+    const vp = session?.viewport ?? { x: 0, y: 0, zoom: 1 };
+    setViewport(vp);
+    viewportRef.current = vp;
     setLoaded(true);
   }, [workspace, setNodes, setEdges, setViewport]);
 
-  // Load on mount
+  // Load on mount / workspace change
   useEffect(() => {
-    // This mount-time load from an external system (the API) is fine.
-    // The lint rule is overly strict for async data fetching here.
+    // Flush any pending save for the previous workspace before loading the new one
+    debouncedSaveRef.current?.flush();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoaded(false);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadCurrentSession();
   }, [loadCurrentSession]);

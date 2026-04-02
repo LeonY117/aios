@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -73,7 +73,7 @@ const edgeTypes = {
   center: CenterEdge,
 };
 
-function CanvasInner({ workspace }: { workspace: string }) {
+function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorkspace: (name: string) => void }) {
   const { theme } = useTheme();
   const router = useRouter();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -132,52 +132,100 @@ function CanvasInner({ workspace }: { workspace: string }) {
 
   // --- Workspace management ---
 
-  async function handleSwitch(name: string) {
-    flushDebouncedSave();
-    await saveSession(workspace, nodesRef.current.filter((n) => n.id !== GROUP_CONNECTOR_ID), edgesRef.current, viewportRef.current);
-    router.push("/" + encodeURIComponent(name));
-  }
+  /** Switch to a workspace without a full page navigation. */
+  const navigateToWorkspace = useCallback(
+    (name: string) => {
+      setWorkspace(name);
+      window.history.pushState(null, "", "/" + encodeURIComponent(name));
+    },
+    [setWorkspace],
+  );
 
-  async function handleCreated(name: string) {
+  /** Find the most recently edited non-archived workspace (excluding `skip`). */
+  const findNextWorkspace = useCallback(
+    async (skip: string): Promise<string | null> => {
+      try {
+        const res = await fetch("/api/session/list");
+        const { sessions } = (await res.json()) as { sessions: { name: string; archived: boolean }[] };
+        const next = sessions.find((s) => !s.archived && s.name !== skip);
+        return next?.name ?? null;
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
+
+  /** Save current workspace state before navigating away. */
+  const saveBeforeLeave = useCallback(() => {
     flushDebouncedSave();
-    await saveSession(workspace, nodesRef.current.filter((n) => n.id !== GROUP_CONNECTOR_ID), edgesRef.current, viewportRef.current);
-    await createSession(name);
-    router.push("/" + encodeURIComponent(name));
-  }
+    return saveSession(workspace, nodesRef.current.filter((n) => n.id !== GROUP_CONNECTOR_ID), edgesRef.current, viewportRef.current);
+  }, [workspace, flushDebouncedSave, nodesRef, edgesRef, viewportRef]);
+
+  const handleSwitch = useCallback(
+    async (name: string) => {
+      await saveBeforeLeave();
+      navigateToWorkspace(name);
+    },
+    [saveBeforeLeave, navigateToWorkspace],
+  );
+
+  const handleCreated = useCallback(
+    async (name: string) => {
+      await saveBeforeLeave();
+      await createSession(name);
+      navigateToWorkspace(name);
+    },
+    [saveBeforeLeave, navigateToWorkspace],
+  );
 
   const handleDeleted = useCallback(
     async (name: string) => {
+      // Save before deleting so undo can restore the latest state
+      if (name === workspace) await saveBeforeLeave();
       await deleteSession(name);
       if (name === workspace) {
-        // Redirect to root — it will pick the newest remaining workspace
-        router.push("/");
+        const next = await findNextWorkspace(name);
+        if (next) {
+          navigateToWorkspace(next);
+        } else {
+          router.push("/");
+        }
       }
     },
-    [workspace, router],
+    [workspace, router, navigateToWorkspace, findNextWorkspace, saveBeforeLeave],
   );
 
   const handleRenamed = useCallback(
     async (oldName: string, newName: string) => {
       await renameSession(oldName, newName);
       if (workspace === oldName) {
-        router.replace("/" + encodeURIComponent(newName));
+        setWorkspace(newName);
+        window.history.replaceState(null, "", "/" + encodeURIComponent(newName));
       }
     },
-    [workspace, router],
+    [workspace, setWorkspace],
   );
 
   const handleArchived = useCallback(
     async (name: string, archived: boolean) => {
       try {
+        // Save before archiving so edits aren't lost (archive is reversible)
+        if (name === workspace) await saveBeforeLeave();
         await archiveSession(name, archived);
         if (archived && name === workspace) {
-          router.push("/");
+          const next = await findNextWorkspace(name);
+          if (next) {
+            navigateToWorkspace(next);
+          } else {
+            router.push("/");
+          }
         }
       } catch {
         // archiveSession throws on failure — sidebar will re-fetch on next open
       }
     },
-    [workspace, router],
+    [workspace, router, navigateToWorkspace, findNextWorkspace, saveBeforeLeave],
   );
 
   // Auto-save on node changes
@@ -452,6 +500,9 @@ function CanvasInner({ workspace }: { workspace: string }) {
         onAddLinkNode={addLinkNode}
         onAddContextBlock={addContextBlock}
         onAddFile={triggerFileUpload}
+        onArchiveWorkspace={handleArchived}
+        onDeleteWorkspace={handleDeleted}
+        onRenameWorkspace={handleRenamed}
       />
       {saveStatus !== "idle" && (
         <div className="absolute bottom-6 left-6 text-xs text-fg-muted select-none">
@@ -462,7 +513,23 @@ function CanvasInner({ workspace }: { workspace: string }) {
   );
 }
 
-export default function Canvas({ workspace }: { workspace: string }) {
+export default function Canvas({ workspace: initialWorkspace }: { workspace: string }) {
+  const [workspace, setWorkspace] = useState(initialWorkspace);
+
+  // Handle browser back/forward — sync state from URL.
+  // Use a ref so the listener is stable and doesn't re-register on every workspace change.
+  const workspaceRef = useRef(workspace);
+  useEffect(() => { workspaceRef.current = workspace; }, [workspace]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const path = decodeURIComponent(window.location.pathname.slice(1));
+      if (path && path !== workspaceRef.current) setWorkspace(path);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
   return (
     <div className="relative w-screen h-dvh">
       {/* Override library z-index so edges/connection line render behind nodes */}
@@ -496,7 +563,7 @@ export default function Canvas({ workspace }: { workspace: string }) {
         }
       `}</style>
       <ReactFlowProvider>
-        <CanvasInner workspace={workspace} />
+        <CanvasInner workspace={workspace} setWorkspace={setWorkspace} />
       </ReactFlowProvider>
     </div>
   );

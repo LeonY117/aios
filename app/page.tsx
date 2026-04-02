@@ -7,36 +7,43 @@ const SESSIONS_DIR = path.join(process.cwd(), "sessions");
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  // Find the most recently created workspace
+  // Find the most recently edited non-archived workspace
+  let target: string | null = null;
+
   try {
     const entries = await fs.readdir(SESSIONS_DIR, { withFileTypes: true });
     const dirs = entries.filter((e) => e.isDirectory());
 
-    let newest: { name: string; createdAt: Date } | null = null;
+    let newest: { name: string; updatedAt: Date } | null = null;
 
     for (const dir of dirs) {
       const sessionFile = path.join(SESSIONS_DIR, dir.name, "session.json");
-      let createdAt: Date;
+      let updatedAt: Date;
       let archived = false;
       try {
         const data = JSON.parse(await fs.readFile(sessionFile, "utf-8"));
         archived = !!data.archived;
-        createdAt = data.createdAt
-          ? new Date(data.createdAt)
+        const ts = data.updatedAt ?? data.createdAt;
+        updatedAt = ts
+          ? new Date(ts)
           : (await fs.stat(path.join(SESSIONS_DIR, dir.name))).birthtime;
       } catch {
-        createdAt = (await fs.stat(path.join(SESSIONS_DIR, dir.name))).birthtime;
+        updatedAt = (await fs.stat(path.join(SESSIONS_DIR, dir.name))).birthtime;
       }
-      if (!archived && (!newest || createdAt > newest.createdAt)) {
-        newest = { name: dir.name, createdAt };
+      if (!archived && (!newest || updatedAt > newest.updatedAt)) {
+        newest = { name: dir.name, updatedAt };
       }
     }
 
     if (newest) {
-      redirect("/" + encodeURIComponent(newest.name));
+      target = newest.name;
     }
   } catch {
     // sessions dir doesn't exist yet
+  }
+
+  if (target) {
+    redirect("/" + encodeURIComponent(target));
   }
 
   // No workspaces exist — create a default one
