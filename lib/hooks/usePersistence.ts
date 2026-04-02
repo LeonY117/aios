@@ -104,6 +104,7 @@ export function usePersistence(
   useEffect(() => {
     // Flush any pending save for the previous workspace before loading the new one
     debouncedSaveRef.current?.flush();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoaded(false);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadCurrentSession();
