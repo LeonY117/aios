@@ -133,13 +133,24 @@ export async function buildWorkspaceBashTool(
   const entries = await Promise.all(
     sessionData.nodes.map(async (node) => {
       let content = "";
+      const ext = node.type === "chatWindow" ? ".json" : ".md";
       try {
         content = await fs.readFile(
-          path.join(contentDir, `${node.id}.md`),
+          path.join(contentDir, `${node.id}${ext}`),
           "utf-8",
         );
       } catch {
-        // No content file — that's fine
+        // Migration fallback: chat content may still be in .md
+        if (node.type === "chatWindow") {
+          try {
+            content = await fs.readFile(
+              path.join(contentDir, `${node.id}.md`),
+              "utf-8",
+            );
+          } catch {
+            // No content file — that's fine
+          }
+        }
       }
       return { node, content };
     }),

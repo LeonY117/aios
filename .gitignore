@@ -46,5 +46,6 @@ plans/
 local/
 tmp/
 sessions/
+sessions.backup-*/
 prototype/*
 !prototype/CLAUDE.md

@@ -68,16 +68,18 @@ async function postLayout(sessionName: string, layout: SessionLayout): Promise<v
   });
 }
 
-async function fetchContent(sessionName: string, nodeId: string): Promise<string> {
-  const res = await fetch(
-    `/api/session/content?name=${encodeURIComponent(sessionName)}&id=${nodeId}`,
-  );
+async function fetchContent(sessionName: string, nodeId: string, nodeType?: string): Promise<string> {
+  const params = new URLSearchParams({ name: sessionName, id: nodeId });
+  if (nodeType) params.set("type", nodeType);
+  const res = await fetch(`/api/session/content?${params}`);
   const { content } = await res.json();
   return content;
 }
 
-async function postContent(sessionName: string, nodeId: string, content: string): Promise<void> {
-  await fetch(`/api/session/content?name=${encodeURIComponent(sessionName)}&id=${nodeId}`, {
+async function postContent(sessionName: string, nodeId: string, content: string, nodeType?: string): Promise<void> {
+  const params = new URLSearchParams({ name: sessionName, id: nodeId });
+  if (nodeType) params.set("type", nodeType);
+  await fetch(`/api/session/content?${params}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content }),
@@ -130,7 +132,7 @@ export async function loadSession(sessionName: string): Promise<{
     // Load content for each node in parallel
     const nodes = await Promise.all(
       layout.nodes.map(async (node) => {
-        const content = await fetchContent(sessionName, node.id);
+        const content = await fetchContent(sessionName, node.id, node.type);
         const data = { ...node.data } as Record<string, unknown>;
 
         if (node.type === "chatWindow" && content) {
@@ -180,7 +182,7 @@ export async function saveSession(
         const content = getNodeContent(node);
         if (content === null) return null;
         if (!isContentDirty(node.id, content)) return null;
-        return postContent(sessionName, node.id, content);
+        return postContent(sessionName, node.id, content, node.type);
       })
       .filter(Boolean);
 
