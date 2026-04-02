@@ -149,7 +149,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
     async (name: string) => {
       await deleteSession(name);
       if (name === workspace) {
-        // Redirect to root — it will pick the newest remaining workspace
+        router.refresh();
         router.push("/");
       }
     },
@@ -171,6 +171,7 @@ function CanvasInner({ workspace }: { workspace: string }) {
       try {
         await archiveSession(name, archived);
         if (archived && name === workspace) {
+          router.refresh();
           router.push("/");
         }
       } catch {

@@ -7,7 +7,9 @@ const SESSIONS_DIR = path.join(process.cwd(), "sessions");
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  // Find the most recently created workspace
+  // Find the most recently edited non-archived workspace
+  let target: string | null = null;
+
   try {
     const entries = await fs.readdir(SESSIONS_DIR, { withFileTypes: true });
     const dirs = entries.filter((e) => e.isDirectory());
@@ -34,10 +36,14 @@ export default async function Home() {
     }
 
     if (newest) {
-      redirect("/" + encodeURIComponent(newest.name));
+      target = newest.name;
     }
   } catch {
     // sessions dir doesn't exist yet
+  }
+
+  if (target) {
+    redirect("/" + encodeURIComponent(target));
   }
 
   // No workspaces exist — create a default one
