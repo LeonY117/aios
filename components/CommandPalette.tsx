@@ -10,6 +10,7 @@ import {
 import type { SessionEntry } from "@/lib/persistence";
 import { ArchiveBoxIcon, DeleteIcon, FolderIcon, RenameIcon } from "@/components/icons";
 import { useTheme, themeList } from "@/lib/themes";
+import { ArchiveBoxIcon, DeleteIcon, RenameIcon } from "@/components/icons";
 
 type CommandPaletteProps = {
   open: boolean;
