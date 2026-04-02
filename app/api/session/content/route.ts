@@ -25,15 +25,6 @@ export async function GET(request: NextRequest) {
     const content = await fs.readFile(contentPath(name, id, type), "utf-8");
     return NextResponse.json({ content });
   } catch {
-    // Migration fallback: chat content may still be in a .md file
-    if (type === "chatWindow") {
-      try {
-        const content = await fs.readFile(contentPath(name, id, null), "utf-8");
-        return NextResponse.json({ content });
-      } catch {
-        return NextResponse.json({ content: "" });
-      }
-    }
     return NextResponse.json({ content: "" });
   }
 }
@@ -52,11 +43,6 @@ export async function POST(request: NextRequest) {
 
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, content);
-
-  // Lazy migration: remove old .md file when chat content is saved as .json
-  if (type === "chatWindow") {
-    await fs.unlink(contentPath(name, id, null)).catch(() => {});
-  }
 
   return NextResponse.json({ ok: true });
 }
