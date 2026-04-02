@@ -59,6 +59,8 @@ import {
   deleteSession,
   renameSession,
   archiveSession,
+  updateSessionEmoji,
+  type SessionEntry,
 } from "@/lib/persistence";
 
 const nodeTypes = {
@@ -77,6 +79,7 @@ function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorksp
   const { theme } = useTheme();
   const router = useRouter();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [sessionMeta, setSessionMeta] = useState<{ archived: boolean; emoji?: string }>({ archived: false });
   const [nodes, setNodesRaw, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
@@ -112,6 +115,18 @@ function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorksp
     doSave,
     onViewportChange,
   } = usePersistence(workspace, nodes, edges, setNodes, setEdges, setViewport);
+
+  // Fetch session metadata (archived, emoji) on mount
+  useEffect(() => {
+    fetch("/api/session/list")
+      .then((r) => r.json())
+      .then(({ sessions }: { sessions: SessionEntry[] }) => {
+        const entry = sessions.find((s) => s.name === workspace);
+        if (entry) {
+          setSessionMeta({ archived: entry.archived, emoji: entry.emoji });
+        }
+      });
+  }, [workspace]);
 
   useGroupSelection(nodes, setNodesRaw);
 
@@ -227,6 +242,32 @@ function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorksp
     },
     [workspace, router, navigateToWorkspace, findNextWorkspace, saveBeforeLeave],
   );
+
+  // Toolbar: rename current workspace
+  // Use history.replaceState to avoid a full page navigation/flash
+  const handleToolbarRename = useCallback(
+    async (newName: string) => {
+      await renameSession(workspace, newName);
+      window.history.replaceState(null, "", "/" + encodeURIComponent(newName));
+      setWorkspace(newName);
+    },
+    [workspace, setWorkspace],
+  );
+
+  // Toolbar: change emoji
+  const handleEmojiChange = useCallback(
+    async (emoji: string | null) => {
+      setSessionMeta((prev) => ({ ...prev, emoji: emoji ?? undefined }));
+      await updateSessionEmoji(workspace, emoji);
+    },
+    [workspace],
+  );
+
+  // Toolbar: restore archived workspace
+  const handleRestore = useCallback(async () => {
+    await archiveSession(workspace, false);
+    setSessionMeta((prev) => ({ ...prev, archived: false }));
+  }, [workspace]);
 
   // Auto-save on node changes
   const handleNodesChange = useCallback(
@@ -480,7 +521,19 @@ function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorksp
           />
         )}
       </ReactFlow>
-      <CanvasToolbar onAddText={addTextBlock} onAddLink={addLinkNode} onAddChat={addChatNode} onAddContextBlock={addContextBlock} onAddFile={addFileNode} />
+      <CanvasToolbar
+        workspaceName={workspace}
+        emoji={sessionMeta.emoji}
+        archived={sessionMeta.archived}
+        onAddText={addTextBlock}
+        onAddLink={addLinkNode}
+        onAddChat={addChatNode}
+        onAddContextBlock={addContextBlock}
+        onAddFile={addFileNode}
+        onRename={handleToolbarRename}
+        onEmojiChange={handleEmojiChange}
+        onRestore={handleRestore}
+      />
       <WorkspaceSidebar
         currentSession={workspace}
         onSwitch={handleSwitch}

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { SessionEntry } from "@/lib/persistence";
 import {
   ChevronDownIcon,
+  FolderIcon,
   RenameIcon,
   ArchiveBoxIcon,
   DeleteIcon,
@@ -190,7 +191,7 @@ export default function WorkspaceSidebar({
     );
   }
 
-  const renderSessionItem = ({ name, archived: isArchived }: SessionEntry) => (
+  const renderSessionItem = ({ name, archived: isArchived, emoji }: SessionEntry) => (
     <div
       key={name}
       className={`group flex items-center h-8 px-3 !cursor-pointer text-sm transition-colors ${
@@ -217,9 +218,14 @@ export default function WorkspaceSidebar({
             onClick={() => {
               if (name !== currentSession) onSwitch(name);
             }}
-            className="flex-1 min-w-0 truncate text-left"
+            className="flex-1 min-w-0 truncate text-left flex items-center gap-1.5"
           >
-            {name}
+            {emoji ? (
+              <span className="text-base shrink-0">{emoji}</span>
+            ) : (
+              <FolderIcon width={12} height={12} className="shrink-0 text-fg-faint" />
+            )}
+            <span className="truncate">{name}</span>
           </button>
           {isArchived ? (
             <button

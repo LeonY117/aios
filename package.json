@@ -13,6 +13,7 @@
     "@ai-sdk/anthropic": "^3.0.58",
     "@ai-sdk/openai": "^3.0.41",
     "@extractus/article-extractor": "^8.0.20",
+    "@jukben/emoji-search": "^3.0.0",
     "@notionhq/client": "^5.13.0",
     "@octokit/rest": "^22.0.1",
     "@tailwindcss/typography": "^0.5.19",

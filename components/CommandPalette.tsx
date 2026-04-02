@@ -8,8 +8,8 @@ import {
   useMemo,
 } from "react";
 import type { SessionEntry } from "@/lib/persistence";
+import { ArchiveBoxIcon, DeleteIcon, FolderIcon, RenameIcon } from "@/components/icons";
 import { useTheme, themeList } from "@/lib/themes";
-import { ArchiveBoxIcon, DeleteIcon, RenameIcon } from "@/components/icons";
 
 type CommandPaletteProps = {
   open: boolean;
@@ -109,12 +109,6 @@ const BackIcon = () => (
   </svg>
 );
 
-const FolderIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z" />
-  </svg>
-);
-
 // ── Helpers ───────────────────────────────────────────────────
 
 function timeAgo(iso: string): string {
@@ -206,7 +200,7 @@ export default function CommandPalette({
       title: s.name,
       meta: `Edited ${timeAgo(s.updatedAt)}`,
       section: recencyBucket(s.updatedAt),
-      icon: <FolderIcon />,
+      icon: s.emoji ? <span className="text-xl">{s.emoji}</span> : <FolderIcon />,
       badge: s.name === currentSession ? "Current" : undefined,
       onSelect: () => {
         if (s.name !== currentSession) {
@@ -461,12 +455,12 @@ export default function CommandPalette({
                           data-selected={flatIndex === selectedIndex}
                           onClick={item.onSelect}
                           onMouseEnter={() => setSelectedIndex(flatIndex)}
-                          className={`flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg cursor-pointer transition-colors text-left ${
+                          className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors text-left ${
                             flatIndex === selectedIndex ? "bg-accent-surface/60" : "hover:bg-hover"
                           }`}
                         >
                           <span
-                            className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-sm ${
+                            className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 text-sm -ml-0.5 ${
                               item.type === "action"
                                 ? "bg-accent-surface border border-accent-line text-accent"
                                 : item.type === "setting"

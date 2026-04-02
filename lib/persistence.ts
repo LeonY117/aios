@@ -217,7 +217,7 @@ export async function createSession(sessionName: string): Promise<boolean> {
 
 // --- Session management ---
 
-export type SessionEntry = { name: string; createdAt: string; updatedAt: string; archived: boolean };
+export type SessionEntry = { name: string; createdAt: string; updatedAt: string; archived: boolean; emoji?: string };
 
 export async function deleteSession(name: string): Promise<void> {
   await fetch(`/api/session?name=${encodeURIComponent(name)}`, {
@@ -233,6 +233,17 @@ export async function renameSession(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ oldName, newName }),
+  });
+}
+
+export async function updateSessionEmoji(
+  name: string,
+  emoji: string | null,
+): Promise<void> {
+  await fetch("/api/session/emoji", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, emoji }),
   });
 }
 

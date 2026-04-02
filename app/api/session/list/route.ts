@@ -5,7 +5,7 @@ import { SESSIONS_DIR } from "@/lib/session-path";
 
 export const dynamic = "force-dynamic";
 
-type SessionEntry = { name: string; createdAt: string; updatedAt: string; archived: boolean };
+type SessionEntry = { name: string; createdAt: string; updatedAt: string; archived: boolean; emoji?: string };
 
 export async function GET() {
   try {
@@ -18,15 +18,18 @@ export async function GET() {
         const stat = await fs.stat(sessionFile).catch(() => null);
         const mtime = stat?.mtime.toISOString();
         let archived = false;
+        let emoji: string | undefined;
         try {
           const data = JSON.parse(await fs.readFile(sessionFile, "utf-8"));
           archived = !!data.archived;
+          emoji = data.emoji || undefined;
           if (data.createdAt) {
             return {
               name: dir.name,
               createdAt: data.createdAt,
               updatedAt: data.updatedAt ?? mtime ?? data.createdAt,
               archived,
+              ...(emoji ? { emoji } : {}),
             };
           }
         } catch {

@@ -120,6 +120,23 @@ export function CurvedArrowIcon({ width = 15, height = 15, className }: IconProp
   );
 }
 
+export function FolderIcon({ width = 14, height = 14, className }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+export function UndoIcon({ width = 14, height = 14, className }: IconProps) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="1 4 1 10 7 10" />
+      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+    </svg>
+  );
+}
+
 export function MoreDotsIcon({ width = 15, height = 15, className }: IconProps) {
   return (
     <svg width={width} height={height} viewBox="0 0 14 14" fill="currentColor" className={className}>
