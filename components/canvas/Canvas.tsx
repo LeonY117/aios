@@ -452,6 +452,9 @@ function CanvasInner({ workspace }: { workspace: string }) {
         onAddLinkNode={addLinkNode}
         onAddContextBlock={addContextBlock}
         onAddFile={triggerFileUpload}
+        onArchiveWorkspace={handleArchived}
+        onDeleteWorkspace={handleDeleted}
+        onRenameWorkspace={handleRenamed}
       />
       {saveStatus !== "idle" && (
         <div className="absolute bottom-6 left-6 text-xs text-fg-muted select-none">
