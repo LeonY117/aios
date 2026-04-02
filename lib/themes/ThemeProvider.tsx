@@ -10,6 +10,7 @@ import {
 } from "react";
 import { themes, SYSTEM_LIGHT, SYSTEM_DARK } from "./themes";
 import type { Theme, ThemeColors } from "./types";
+import { buildNormalCursor, buildAltDragCursor } from "@/lib/canvas/cursors";
 
 // ---------------------------------------------------------------------------
 // System preference detection (SSR-safe via useSyncExternalStore)
@@ -65,6 +66,8 @@ function applyColors(colors: ThemeColors) {
   for (const [key, value] of Object.entries(colors)) {
     root.style.setProperty(`--${key}`, value);
   }
+  root.style.setProperty("--cursor-normal", buildNormalCursor());
+  root.style.setProperty("--cursor-alt", buildAltDragCursor(colors.accent, colors["accent-line"]));
 }
 
 // ---------------------------------------------------------------------------
