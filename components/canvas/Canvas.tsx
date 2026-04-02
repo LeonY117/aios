@@ -16,6 +16,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { setPendingEditorFocus } from "@/lib/editor-focus-signal";
+import type { NodeViewMode } from "@/types";
 
 import SotCardNode from "./nodes/SotCardNode";
 import ChatNode from "./nodes/ChatNode";
@@ -45,7 +46,7 @@ import {
   createLinkInputNode,
 } from "@/lib/nodes";
 import { useTheme } from "@/lib/themes";
-import { selectAllSots } from "@/lib/canvas/actions";
+import { selectAllSots, changeViewMode } from "@/lib/canvas/actions";
 import { cloneNodes } from "@/lib/canvas/clone-nodes";
 import { setClipboard, getClipboard, incrementPasteCount } from "@/lib/canvas/internal-clipboard";
 import { topZIndex } from "@/lib/nodes";
@@ -348,6 +349,20 @@ function CanvasInner({ workspace }: { workspace: string }) {
     return true;
   }, [setNodes, setEdges, loaded, triggerDebouncedSave]);
 
+  const toggleMaximizeNode = useCallback(() => {
+    setNodes((nds) => {
+      const selectedIds = nds.filter((n) => n.selected).map((n) => n.id);
+      if (selectedIds.length === 0) return nds;
+      let result = nds;
+      for (const nodeId of selectedIds) {
+        const data = result.find((n) => n.id === nodeId)?.data as { viewMode?: NodeViewMode } | undefined;
+        const next: NodeViewMode = (data?.viewMode ?? "normal") === "maximized" ? "normal" : "maximized";
+        result = changeViewMode(result, nodeId, next);
+      }
+      return result;
+    });
+  }, [setNodes]);
+
   useKeyboardShortcuts(
     useMemo(
       () => ({
@@ -362,8 +377,9 @@ function CanvasInner({ workspace }: { workspace: string }) {
         copyNodes,
         cutNodes,
         pasteNodes,
+        toggleMaximizeNode,
       }),
-      [addTextBlock, addLinkNode, addChatNode, addContextBlock, doSave, flushDebouncedSave, selectAll, toggleCommandPalette, copyNodes, cutNodes, pasteNodes],
+      [addTextBlock, addLinkNode, addChatNode, addContextBlock, doSave, flushDebouncedSave, selectAll, toggleCommandPalette, copyNodes, cutNodes, pasteNodes, toggleMaximizeNode],
     ),
   );
 

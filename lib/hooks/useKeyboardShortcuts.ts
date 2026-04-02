@@ -15,6 +15,7 @@ type ShortcutActions = {
   cutNodes: () => void;
   /** Returns true if internal clipboard had content (paste was handled). */
   pasteNodes: () => boolean;
+  toggleMaximizeNode: () => void;
 };
 
 /**
@@ -57,6 +58,13 @@ export function useKeyboardShortcuts(actions: ShortcutActions) {
               return;
           }
         }
+      }
+
+      // Cmd+Shift+Enter — toggle maximize (works even inside editors)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "Enter") {
+        e.preventDefault();
+        actions.toggleMaximizeNode();
+        return;
       }
 
       if (!e.metaKey && !e.ctrlKey) return;

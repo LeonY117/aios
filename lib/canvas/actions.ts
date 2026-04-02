@@ -1,4 +1,5 @@
 import type { Node, Edge } from "@xyflow/react";
+import type { NodeViewMode } from "@/types";
 import { addEdge } from "@xyflow/react";
 
 // ---------------------------------------------------------------------------
@@ -58,6 +59,24 @@ export function updateNode<T extends Record<string, unknown>>(
     }
     return updated;
   });
+}
+
+/** Change a node's viewMode, saving/restoring height for minimize transitions. */
+export function changeViewMode(
+  nodes: Node[],
+  nodeId: string,
+  viewMode: NodeViewMode,
+): Node[] {
+  const node = nodes.find((n) => n.id === nodeId);
+  if (!node) return nodes;
+  const currentHeight = node.measured?.height ?? (node.style as Record<string, unknown>)?.height as number | undefined;
+  const savedHeight = (node.data as { _savedHeight?: number })._savedHeight;
+
+  if (viewMode === "minimized") {
+    return updateNode(nodes, nodeId, { viewMode, _savedHeight: currentHeight }, { height: undefined });
+  }
+  const restoreHeight = savedHeight ?? currentHeight;
+  return updateNode(nodes, nodeId, { viewMode, _savedHeight: undefined }, restoreHeight ? { height: restoreHeight } : {});
 }
 
 /** Select only SOT-type nodes (sotCard + contextBlock). */

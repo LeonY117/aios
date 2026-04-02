@@ -17,7 +17,7 @@ import type { SotNodeData } from "@/types";
 import type { Node } from "@xyflow/react";
 import { SOURCE_ENDPOINT } from "@/lib/canvas/source-endpoints";
 import { copyWithFeedback } from "@/lib/canvas/clipboard";
-import { updateNodeData, updateNode } from "@/lib/canvas/actions";
+import { updateNodeData, changeViewMode } from "@/lib/canvas/actions";
 import { CheckIcon, CopyIcon, LinkIcon, RefreshIcon } from "@/components/icons";
 import NodeWindowControls from "./NodeWindowControls";
 import NodeSelectionBar from "./NodeSelectionBar";
@@ -158,19 +158,7 @@ function SotCardNode({
 
   const handleViewModeChange = useCallback(
     (viewMode: NodeViewMode) => {
-      setNodes((nds) => {
-        const node = nds.find((n) => n.id === id);
-        if (!node) return nds;
-        const currentHeight = node.measured?.height ?? (node.style as Record<string, unknown>)?.height as number | undefined;
-        const savedHeight = (node.data as SotNodeData & { _savedHeight?: number })._savedHeight;
-
-        if (viewMode === "minimized") {
-          // Remove height so the node auto-sizes to its minimized content
-          return updateNode<SotNodeData>(nds, id, { viewMode, _savedHeight: currentHeight } as Partial<SotNodeData>, { height: undefined });
-        }
-        const restoreHeight = savedHeight ?? currentHeight;
-        return updateNode<SotNodeData>(nds, id, { viewMode, _savedHeight: undefined } as Partial<SotNodeData>, restoreHeight ? { height: restoreHeight } : {});
-      });
+      setNodes((nds) => changeViewMode(nds, id, viewMode));
     },
     [id, setNodes],
   );

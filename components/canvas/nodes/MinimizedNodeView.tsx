@@ -18,7 +18,7 @@ export default function MinimizedNodeView({
   onViewModeChange,
 }: MinimizedNodeViewProps) {
   return (
-    <div className="custom-drag-handle flex items-start gap-1.5 pt-3.5 px-4 pb-4 cursor-grab active:cursor-grabbing">
+    <div className="custom-drag-handle flex items-start gap-1.5 pt-3.5 px-4 pb-4 cursor-grab active:cursor-grabbing" onDoubleClick={() => onViewModeChange("normal")}>
       <div className="min-w-0 flex-1 flex flex-col justify-between">
         <span className="text-[18px] font-bold leading-[1.3] text-fg line-clamp-3">
           {title}

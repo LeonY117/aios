@@ -217,7 +217,7 @@ function SourcesDropdown({ sources }: { sources: ChatSource[] }) {
 
 import { SOURCE_ENDPOINT } from "@/lib/canvas/source-endpoints";
 import { copyWithFeedback } from "@/lib/canvas/clipboard";
-import { updateNodeData, updateNode, removeEdgeBetween, addEdgesFromSots } from "@/lib/canvas/actions";
+import { updateNodeData, removeEdgeBetween, addEdgesFromSots, changeViewMode } from "@/lib/canvas/actions";
 import { CheckIcon, CopyIcon, LinkIcon, RefreshIcon, ChevronDownIcon } from "@/components/icons";
 import NodeWindowControls from "./NodeWindowControls";
 import NodeSelectionBar from "./NodeSelectionBar";
@@ -860,18 +860,7 @@ function ChatNode({
 
   const handleViewModeChange = useCallback(
     (viewMode: NodeViewMode) => {
-      setNodes((nds) => {
-        const node = nds.find((n) => n.id === id);
-        if (!node) return nds;
-        const currentHeight = node.measured?.height ?? (node.style as Record<string, unknown>)?.height as number | undefined;
-        const savedHeight = (node.data as ChatNodeData & { _savedHeight?: number })._savedHeight;
-
-        if (viewMode === "minimized") {
-          return updateNode<ChatNodeData>(nds, id, { viewMode, _savedHeight: currentHeight } as Partial<ChatNodeData>, { height: undefined });
-        }
-        const restoreHeight = savedHeight ?? currentHeight;
-        return updateNode<ChatNodeData>(nds, id, { viewMode, _savedHeight: undefined } as Partial<ChatNodeData>, restoreHeight ? { height: restoreHeight } : {});
-      });
+      setNodes((nds) => changeViewMode(nds, id, viewMode));
     },
     [id, setNodes],
   );

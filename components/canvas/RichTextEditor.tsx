@@ -7,6 +7,7 @@ import Underline from "@tiptap/extension-underline";
 import TaskList from "@tiptap/extension-task-list";
 import { Markdown } from "@tiptap/markdown";
 import { useEffect, useRef } from "react";
+import type { Editor } from "@tiptap/react";
 import { clearPendingEditorFocus } from "@/lib/editor-focus-signal";
 import { CustomTaskItem, ListBehaviorFix } from "./list-extensions";
 
@@ -64,6 +65,7 @@ type RichTextEditorProps = {
   onChange: (markdown: string) => void;
   autoFocus?: boolean;
   selected?: boolean;
+  onEditor?: (editor: Editor | null) => void;
 };
 
 /* ── Main editor ── */
@@ -73,12 +75,18 @@ export default function RichTextEditor({
   onChange,
   autoFocus = false,
   selected = false,
+  onEditor,
 }: RichTextEditorProps) {
   const isHtml = IS_HTML.test((content ?? "").trim());
   const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
+
+  const onEditorRef = useRef(onEditor);
+  useEffect(() => {
+    onEditorRef.current = onEditor;
+  }, [onEditor]);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -94,6 +102,9 @@ export default function RichTextEditor({
     content: isHtml ? content : preserveBlankLines(content ?? ""),
     contentType: isHtml ? "html" : "markdown",
     autofocus: autoFocus ? "end" : false,
+    onCreate: ({ editor: e }) => {
+      onEditorRef.current?.(e);
+    },
     onUpdate: ({ editor: e }) => {
       onChangeRef.current(e.getMarkdown());
     },

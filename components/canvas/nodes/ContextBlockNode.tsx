@@ -31,7 +31,7 @@ function selectConnectedSots(id: string) {
 
 import { shallowArrayEqual } from "@/lib/canvas/shallow-equal";
 import { copyWithFeedback } from "@/lib/canvas/clipboard";
-import { updateNodeData, updateNode } from "@/lib/canvas/actions";
+import { updateNodeData, changeViewMode } from "@/lib/canvas/actions";
 import NodeWindowControls from "./NodeWindowControls";
 import NodeSelectionBar from "./NodeSelectionBar";
 import MinimizedNodeView from "./MinimizedNodeView";
@@ -77,18 +77,7 @@ function ContextBlockNode({
 
   const handleViewModeChange = useCallback(
     (viewMode: NodeViewMode) => {
-      setNodes((nds) => {
-        const node = nds.find((n) => n.id === id);
-        if (!node) return nds;
-        const currentHeight = node.measured?.height ?? (node.style as Record<string, unknown>)?.height as number | undefined;
-        const savedHeight = (node.data as ContextBlockData & { _savedHeight?: number })._savedHeight;
-
-        if (viewMode === "minimized") {
-          return updateNode<ContextBlockData>(nds, id, { viewMode, _savedHeight: currentHeight } as Partial<ContextBlockData>, { height: undefined });
-        }
-        const restoreHeight = savedHeight ?? currentHeight;
-        return updateNode<ContextBlockData>(nds, id, { viewMode, _savedHeight: undefined } as Partial<ContextBlockData>, restoreHeight ? { height: restoreHeight } : {});
-      });
+      setNodes((nds) => changeViewMode(nds, id, viewMode));
     },
     [id, setNodes],
   );
@@ -160,7 +149,7 @@ function ContextBlockNode({
           <MinimizedNodeView title={data.title} wordCount={wordCount} viewMode={viewMode} onViewModeChange={handleViewModeChange} />
         ) : (
           <>
-            <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing">
+            <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing" onDoubleClick={() => handleViewModeChange("minimized")}>
               <div className={`h-[3px] w-6 rounded-full bg-accent-handle ${hoverReveal}`} />
             </div>
 
