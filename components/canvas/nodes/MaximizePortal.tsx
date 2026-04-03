@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useEscapeKey } from "@/lib/hooks/useEscapeKey";
 
 type MaximizePortalProps = {
   children: React.ReactNode;
@@ -14,17 +15,7 @@ export default function MaximizePortal({
 }: MaximizePortalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    },
-    [onClose],
-  );
-
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
+  useEscapeKey(onClose);
 
   // Block wheel events at the native level so React Flow's canvas doesn't scroll
   useEffect(() => {

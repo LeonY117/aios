@@ -10,6 +10,7 @@ type MinimizedNodeViewProps = {
   wordCount: number;
   viewMode: NodeViewMode;
   onViewModeChange: (mode: NodeViewMode) => void;
+  emoji?: string | null;
 };
 
 export default memo(function MinimizedNodeView({
@@ -17,12 +18,13 @@ export default memo(function MinimizedNodeView({
   wordCount,
   viewMode,
   onViewModeChange,
+  emoji,
 }: MinimizedNodeViewProps) {
   return (
     <div className="custom-drag-handle flex items-start gap-1.5 pt-3.5 px-4 pb-4 cursor-grab active:cursor-grabbing" onDoubleClick={() => onViewModeChange("normal")}>
       <div className="min-w-0 flex-1 flex flex-col justify-between">
         <span className="text-[18px] font-bold leading-[1.3] text-fg line-clamp-3">
-          {title}
+          {emoji && <span className="mr-1">{emoji}</span>}{title}
         </span>
         <span className="mt-1.5 text-[10px] text-fg-faint">
           {wordCount.toLocaleString()} words

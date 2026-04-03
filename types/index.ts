@@ -34,6 +34,7 @@ export type SotNodeData = {
   isRichText?: boolean;
   isEditing?: boolean;
   viewMode?: NodeViewMode;
+  emoji?: string | null;
 };
 
 export type ChatSource = {

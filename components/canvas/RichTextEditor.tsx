@@ -66,6 +66,7 @@ type RichTextEditorProps = {
   autoFocus?: boolean;
   selected?: boolean;
   onEditor?: (editor: Editor | null) => void;
+  headerSlot?: React.ReactNode;
 };
 
 /* ── Main editor ── */
@@ -76,6 +77,7 @@ export default function RichTextEditor({
   autoFocus = false,
   selected = false,
   onEditor,
+  headerSlot,
 }: RichTextEditorProps) {
   const isHtml = IS_HTML.test((content ?? "").trim());
   const onChangeRef = useRef(onChange);
@@ -160,6 +162,7 @@ export default function RichTextEditor({
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className={`min-h-0 flex-1 overflow-y-auto ${selected ? "nowheel" : ""}`}>
         <div className="mx-auto max-w-xl">
+          {headerSlot}
           <EditorContent editor={editor} />
         </div>
       </div>

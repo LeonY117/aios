@@ -27,6 +27,9 @@ export function useDragToAttach(
   nodes: Node[],
   setNodes: (updater: Node[] | ((prev: Node[]) => Node[])) => void,
   setEdges: (updater: Edge[] | ((prev: Edge[]) => Edge[])) => void,
+  setNodesWithHistory: (updater: Node[] | ((prev: Node[]) => Node[])) => void,
+  setEdgesWithHistory: (updater: Edge[] | ((prev: Edge[]) => Edge[])) => void,
+  pushSnapshot: () => void,
   screenToFlowPosition: (pos: { x: number; y: number }) => { x: number; y: number },
   triggerDebouncedSave: () => void,
   loaded: boolean,
@@ -75,7 +78,7 @@ export function useDragToAttach(
       const selectedSots = connectSelectionRef.current;
       connectSelectionRef.current = [];
 
-      setEdges((eds) => {
+      setEdgesWithHistory((eds) => {
         // Skip edge from the group-connector proxy -- it's not a real source
         const base =
           connection.source === GROUP_CONNECTOR_ID
@@ -89,7 +92,7 @@ export function useDragToAttach(
       });
       if (loaded) triggerDebouncedSave();
     },
-    [setEdges, triggerDebouncedSave, loaded],
+    [setEdgesWithHistory, triggerDebouncedSave, loaded],
   );
 
   // Figma-like solo-select: clicking an already-selected node in a group
@@ -119,6 +122,11 @@ export function useDragToAttach(
         );
       }
 
+      // Snapshot before positions change (or before clone).
+      // Drag position changes come via React Flow's internal handler (not our
+      // setters), so we push explicitly here.
+      pushSnapshot();
+
       // Alt+drag: clone selected nodes (or just the dragged node) at their current positions
       if (event.altKey) {
         const dragged = nodesRef.current.find((n) => n.id === _node.id);
@@ -137,13 +145,14 @@ export function useDragToAttach(
         const { nodes: clonedNodes, edges: clonedEdges } = cloneNodes(
           toCopy, relevantEdges, { x: 0, y: 0 },
         );
-        // Insert clones unselected at original positions — user drags originals away
+        // Insert clones unselected at original positions — user drags originals away.
+        // pushSnapshot was already called above — microtask coalescing ensures one entry.
         setNodes((nds) => [...nds, ...clonedNodes.map((n) => ({ ...n, selected: false }))]);
         setEdges((eds) => [...eds, ...clonedEdges]);
         if (loaded) triggerDebouncedSave();
       }
     },
-    [nodesRef, edgesRef, setNodes, setEdges, loaded, triggerDebouncedSave],
+    [nodesRef, edgesRef, setNodes, setEdges, loaded, triggerDebouncedSave, pushSnapshot],
   );
 
   // When dragged SOT nodes are dropped onto a chat, create edges for all of them
@@ -190,7 +199,7 @@ export function useDragToAttach(
         });
 
         if (overlaps) {
-          setEdges((eds) =>
+          setEdgesWithHistory((eds) =>
             addEdgesFromSots(
               eds,
               sotNodes.map((n) => n.id),
@@ -202,7 +211,7 @@ export function useDragToAttach(
         }
       }
     },
-    [nodesRef, setEdges, triggerDebouncedSave, loaded],
+    [nodesRef, setEdgesWithHistory, triggerDebouncedSave, loaded],
   );
 
   // Derived lists for selection toolbar
@@ -228,7 +237,7 @@ export function useDragToAttach(
           n.selected &&
           (n.type === "sotCard" || n.type === "contextBlock"),
       );
-      setEdges((eds) =>
+      setEdgesWithHistory((eds) =>
         addEdgesFromSots(
           eds,
           sots.map((n) => n.id),
@@ -237,7 +246,7 @@ export function useDragToAttach(
       );
       if (loaded) triggerDebouncedSave();
     },
-    [nodesRef, setEdges, triggerDebouncedSave, loaded],
+    [nodesRef, setEdgesWithHistory, triggerDebouncedSave, loaded],
   );
 
   const newChatWithContext = useCallback(() => {
@@ -254,7 +263,8 @@ export function useDragToAttach(
       messages: [],
       webSearch: false,
     };
-    setNodes((nds) => [
+    // Both calls coalesce into a single undo entry via microtask batching
+    setNodesWithHistory((nds) => [
       ...nds.map((n) => (n.selected ? { ...n, selected: false } : n)),
       {
         id: chatId,
@@ -266,7 +276,7 @@ export function useDragToAttach(
         selected: true,
       },
     ]);
-    setEdges((eds) =>
+    setEdgesWithHistory((eds) =>
       addEdgesFromSots(
         eds,
         sots.map((n) => n.id),
@@ -274,7 +284,7 @@ export function useDragToAttach(
       ),
     );
     if (loaded) triggerDebouncedSave();
-  }, [nodesRef, screenToFlowPosition, setNodes, setEdges, triggerDebouncedSave, loaded]);
+  }, [nodesRef, screenToFlowPosition, setNodesWithHistory, setEdgesWithHistory, triggerDebouncedSave, loaded]);
 
   return {
     captureSelectionBeforeDeselect,

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useClickOutside } from "@/lib/hooks/useClickOutside";
+import { useEscapeKey } from "@/lib/hooks/useEscapeKey";
 import emojiSearch from "@jukben/emoji-search";
 
 // Full emoji set organized by category — native system emojis
@@ -157,18 +159,36 @@ type EmojiPickerProps = {
   onSelect: (emoji: string) => void;
   onRemove: () => void;
   onClose: () => void;
+  anchorRef?: React.RefObject<HTMLElement | null>;
 };
 
-export default function EmojiPicker({ onSelect, onRemove, onClose }: EmojiPickerProps) {
+export default function EmojiPicker({ onSelect, onRemove, onClose, anchorRef }: EmojiPickerProps) {
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pos = useMemo(() => {
+    const anchor = anchorRef?.current;
+    if (!anchor) return null;
+    const rect = anchor.getBoundingClientRect();
+    return { top: rect.bottom + 4, left: rect.left };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useClickOutside(ref, onClose, true);
+
+  // Close when the page scrolls so the picker doesn't drift from its anchor
+  useEffect(() => {
+    if (!anchorRef) return;
+    const handleScroll = () => onClose();
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
+  }, [anchorRef, onClose]);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  useEscapeKey(onClose);
 
   // Keyword-powered search, grouped by category
   const searchGrouped = useMemo(() => {
@@ -209,11 +229,13 @@ export default function EmojiPicker({ onSelect, onRemove, onClose }: EmojiPicker
 
   const categories = searchGrouped ?? EMOJI_CATEGORIES;
 
-  return (
+  const usePortal = !!anchorRef;
+
+  const picker = (
     <div
       ref={ref}
-      className="absolute top-full left-0 mt-1 w-[256px] bg-surface border border-line rounded-lg shadow-xl z-50 flex flex-col overflow-hidden"
-      style={{ maxHeight: 320 }}
+      className={`w-[256px] bg-surface border border-line rounded-lg shadow-xl flex flex-col overflow-hidden ${usePortal ? "fixed z-[9999]" : "absolute top-full left-0 mt-1 z-50"}`}
+      style={usePortal && pos ? { top: pos.top, left: pos.left, maxHeight: 320 } : { maxHeight: 320 }}
     >
       <div className="px-1.5 pt-1.5 pb-0.5">
         <input
@@ -260,4 +282,9 @@ export default function EmojiPicker({ onSelect, onRemove, onClose }: EmojiPicker
       </div>
     </div>
   );
+
+  if (usePortal) {
+    return createPortal(picker, document.body);
+  }
+  return picker;
 }

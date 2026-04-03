@@ -85,28 +85,38 @@ export function usePersistence(
 
   const loadingWorkspaceRef = useRef<string | null>(null);
 
+  // Grace period after load — suppresses false "edited" from post-load
+  // viewport changes and node-count effects settling.
+  const settledRef = useRef(false);
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const loadCurrentSession = useCallback(async () => {
     const target = workspace;
     loadingWorkspaceRef.current = target;
+    settledRef.current = false;
+    if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
     const session = await loadSession(target);
     // If workspace changed while we were fetching, discard this result.
     if (loadingWorkspaceRef.current !== target) return;
     clearContentHashes();
-    setNodes(session?.nodes ?? []);
+    const loadedNodes = session?.nodes ?? [];
+    setNodes(loadedNodes);
     setEdges(session?.edges ?? []);
     const vp = session?.viewport ?? { x: 0, y: 0, zoom: 1 };
     setViewport(vp);
     viewportRef.current = vp;
+    // Sync prevNodeCount so the node-count effect doesn't see a change on load
+    prevNodeCount.current = loadedNodes.length;
     setLoaded(true);
+    // Allow viewport saves after settling period
+    settleTimerRef.current = setTimeout(() => { settledRef.current = true; }, 1500);
   }, [workspace, setNodes, setEdges, setViewport]);
 
   // Load on mount / workspace change
   useEffect(() => {
     // Flush any pending save for the previous workspace before loading the new one
     debouncedSaveRef.current?.flush();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoaded(false);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadCurrentSession();
   }, [loadCurrentSession]);
 
@@ -120,7 +130,7 @@ export function usePersistence(
   const onViewportChange = useCallback(
     (vp: Viewport) => {
       viewportRef.current = vp;
-      if (!loaded) return;
+      if (!loaded || !settledRef.current) return;
       if (vpSaveTimerRef.current) clearTimeout(vpSaveTimerRef.current);
       vpSaveTimerRef.current = setTimeout(() => {
         triggerDebouncedSave();
@@ -134,7 +144,7 @@ export function usePersistence(
   const prevNodeCount = useRef(0);
   useEffect(() => {
     if (loaded && nodes.length !== prevNodeCount.current) {
-      prevNodeCount.current = nodes.length;
+      prevNodeCount.current = nodes.length; // eslint-disable-line react-hooks/immutability
       triggerDebouncedSave();
     }
   }, [nodes.length, triggerDebouncedSave, loaded]);

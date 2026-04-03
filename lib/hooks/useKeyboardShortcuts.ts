@@ -16,6 +16,8 @@ type ShortcutActions = {
   /** Returns true if internal clipboard had content (paste was handled). */
   pasteNodes: () => boolean;
   toggleMaximizeNode: () => void;
+  undo: () => void;
+  redo: () => void;
 };
 
 /**
@@ -68,6 +70,25 @@ export function useKeyboardShortcuts(actions: ShortcutActions) {
       }
 
       if (!e.metaKey && !e.ctrlKey) return;
+
+      // Cmd+Z / Cmd+Shift+Z — undo/redo (skip if input is focused)
+      if (e.key === "z") {
+        const active = document.activeElement;
+        if (
+          active instanceof HTMLInputElement ||
+          active instanceof HTMLTextAreaElement ||
+          (active instanceof HTMLElement && active.isContentEditable)
+        ) {
+          return;
+        }
+        e.preventDefault();
+        if (e.shiftKey) {
+          actions.redo();
+        } else {
+          actions.undo();
+        }
+        return;
+      }
 
       // Cmd+K — command palette
       if (e.key === "k") {
