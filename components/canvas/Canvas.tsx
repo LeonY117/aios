@@ -34,6 +34,7 @@ import { useSpacePan } from "@/lib/hooks/useSpacePan";
 import { usePersistence } from "@/lib/hooks/usePersistence";
 import { useKeyboardShortcuts } from "@/lib/hooks/useKeyboardShortcuts";
 import { useGroupSelection } from "@/lib/hooks/useGroupSelection";
+import { useUndoRedo } from "@/lib/hooks/useUndoRedo";
 import { useDragToAttach } from "@/lib/hooks/useDragToAttach";
 import { GROUP_CONNECTOR_ID } from "@/lib/canvas/constants";
 import { handleFileUpload } from "@/lib/hooks/useFileUpload";
@@ -116,6 +117,8 @@ function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorksp
     onViewportChange,
   } = usePersistence(workspace, nodes, edges, setNodes, setEdges, setViewport);
 
+  const { pushSnapshot, setNodesWithHistory, setEdgesWithHistory, undo, redo, isRestoringRef } = useUndoRedo(nodes, edges, setNodes, setEdges, workspace);
+
   // Fetch session metadata (archived, emoji) on mount
   useEffect(() => {
     fetch("/api/session/list")
@@ -143,7 +146,7 @@ function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorksp
     chatNodes,
     attachToChat,
     newChatWithContext,
-  } = useDragToAttach(nodesRef, edgesRef, nodes, setNodes, setEdges, screenToFlowPosition, triggerDebouncedSave, loaded, workspace);
+  } = useDragToAttach(nodesRef, edgesRef, nodes, setNodes, setEdges, setNodesWithHistory, setEdgesWithHistory, pushSnapshot, screenToFlowPosition, triggerDebouncedSave, loaded, workspace);
 
   // --- Workspace management ---
 
@@ -269,11 +272,32 @@ function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorksp
     setSessionMeta((prev) => ({ ...prev, archived: false }));
   }, [workspace]);
 
+  // Track resize operations to batch into a single history entry
+  const resizingRef = useRef(false);
+  const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Auto-save on node changes
   const handleNodesChange = useCallback(
     (changes: NodeChange<Node>[]) => {
       // Snapshot selected SOTs before deselection for drag-to-attach
       captureSelectionBeforeDeselect(changes);
+
+      if (!isRestoringRef.current) {
+        // Snapshot before node removals
+        const hasRemove = changes.some((c) => c.type === "remove");
+        if (hasRemove) pushSnapshot();
+
+        // Snapshot on first resize (dimensions change), batch subsequent ones
+        const hasDimensions = changes.some((c) => c.type === "dimensions");
+        if (hasDimensions && !resizingRef.current) {
+          resizingRef.current = true;
+          pushSnapshot();
+        }
+        if (hasDimensions) {
+          if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
+          resizeTimerRef.current = setTimeout(() => { resizingRef.current = false; }, 300);
+        }
+      }
 
       for (const change of changes) {
         if (change.type === "remove") {
@@ -285,16 +309,20 @@ function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorksp
       const hasPersistableChange = changes.some((c) => c.type !== "select");
       if (loaded && hasPersistableChange) triggerDebouncedSave();
     },
-    [workspace, onNodesChange, triggerDebouncedSave, loaded, captureSelectionBeforeDeselect],
+    [workspace, onNodesChange, triggerDebouncedSave, loaded, captureSelectionBeforeDeselect, isRestoringRef, pushSnapshot],
   );
 
   // Auto-save on edge changes
   const handleEdgesChange = useCallback(
     (changes: Parameters<typeof onEdgesChange>[0]) => {
+      if (!isRestoringRef.current) {
+        const hasRemove = changes.some((c) => c.type === "remove");
+        if (hasRemove) pushSnapshot();
+      }
       onEdgesChange(changes);
       if (loaded) triggerDebouncedSave();
     },
-    [onEdgesChange, triggerDebouncedSave, loaded],
+    [onEdgesChange, triggerDebouncedSave, loaded, isRestoringRef, pushSnapshot],
   );
 
   // Allow pinch / Cmd+scroll zoom even over .nowheel elements.
@@ -328,25 +356,29 @@ function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorksp
     const chatHasFocus = active instanceof HTMLTextAreaElement;
     if (!chatHasFocus) setPendingEditorFocus();
     const position = viewportCenter(screenToFlowPosition);
-    setNodes((nds) => appendNode(nds, createTextBlockNode(position, { isEditing: !chatHasFocus })));
-  }, [screenToFlowPosition, setNodes]);
+    setNodesWithHistory((nds) => appendNode(nds, createTextBlockNode(position, { isEditing: !chatHasFocus })));
+  }, [screenToFlowPosition, setNodesWithHistory]);
 
   const addLinkNode = useCallback(() => {
     const position = viewportCenter(screenToFlowPosition);
-    setNodes((nds) => appendNode(nds, createLinkInputNode(position)));
-  }, [screenToFlowPosition, setNodes]);
+    setNodesWithHistory((nds) => appendNode(nds, createLinkInputNode(position)));
+  }, [screenToFlowPosition, setNodesWithHistory]);
 
   const addChatNode = useCallback(() => {
     const position = viewportCenter(screenToFlowPosition);
-    setNodes((nds) => appendNode(nds, createChatWindowNode(position)));
-  }, [screenToFlowPosition, setNodes]);
+    setNodesWithHistory((nds) => appendNode(nds, createChatWindowNode(position)));
+  }, [screenToFlowPosition, setNodesWithHistory]);
 
   const addFileNode = useCallback(
     (file: File, position?: { x: number; y: number }) => {
+      // Snapshot explicitly, then use raw setNodes — handleFileUpload's
+      // async setNodes calls (content fill, error cleanup) should not
+      // create additional history entries.
+      pushSnapshot();
       const pos = position ?? viewportCenter(screenToFlowPosition);
       handleFileUpload(file, pos, setNodes, workspace);
     },
-    [screenToFlowPosition, setNodes, workspace],
+    [screenToFlowPosition, setNodes, workspace, pushSnapshot],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -369,8 +401,8 @@ function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorksp
 
   const addContextBlock = useCallback(() => {
     const position = viewportCenter(screenToFlowPosition);
-    setNodes((nds) => appendNode(nds, createContextBlockNode(position)));
-  }, [screenToFlowPosition, setNodes]);
+    setNodesWithHistory((nds) => appendNode(nds, createContextBlockNode(position)));
+  }, [screenToFlowPosition, setNodesWithHistory]);
 
   const selectAll = useCallback(() => {
     setNodes((nds) => selectAllSots(nds));
@@ -408,6 +440,7 @@ function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorksp
   }, [nodesRef, edgesRef]);
 
   const cutNodes = useCallback(() => {
+    // pushSnapshot is called by handleNodesChange when it sees "remove" changes
     copyNodes();
     const selected = nodesRef.current.filter(
       (n) => n.selected && n.id !== GROUP_CONNECTOR_ID,
@@ -428,18 +461,19 @@ function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorksp
     const { nodes: clonedNodes, edges: clonedEdges } = cloneNodes(
       clip.nodes, clip.edges, { x: offset, y: offset },
     );
-    setNodes((nds) => {
+    // Both calls coalesce into a single undo entry
+    setNodesWithHistory((nds) => {
       const deselected = nds.map((n) => (n.selected ? { ...n, selected: false } : n));
       const z = topZIndex(deselected);
       return [...deselected, ...clonedNodes.map((n, i) => ({ ...n, zIndex: z + i + 1 }))];
     });
-    setEdges((eds) => [...eds, ...clonedEdges]);
+    setEdgesWithHistory((eds) => [...eds, ...clonedEdges]);
     if (loaded) triggerDebouncedSave();
     return true;
-  }, [setNodes, setEdges, loaded, triggerDebouncedSave]);
+  }, [setNodesWithHistory, setEdgesWithHistory, loaded, triggerDebouncedSave]);
 
   const toggleMaximizeNode = useCallback(() => {
-    setNodes((nds) => {
+    setNodesWithHistory((nds) => {
       const selectedIds = nds.filter((n) => n.selected).map((n) => n.id);
       if (selectedIds.length === 0) return nds;
       let result = nds;
@@ -450,7 +484,7 @@ function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorksp
       }
       return result;
     });
-  }, [setNodes]);
+  }, [setNodesWithHistory]);
 
   useKeyboardShortcuts(
     useMemo(
@@ -467,8 +501,10 @@ function CanvasInner({ workspace, setWorkspace }: { workspace: string; setWorksp
         cutNodes,
         pasteNodes,
         toggleMaximizeNode,
+        undo,
+        redo,
       }),
-      [addTextBlock, addLinkNode, addChatNode, addContextBlock, doSave, flushDebouncedSave, selectAll, toggleCommandPalette, copyNodes, cutNodes, pasteNodes, toggleMaximizeNode],
+      [addTextBlock, addLinkNode, addChatNode, addContextBlock, doSave, flushDebouncedSave, selectAll, toggleCommandPalette, copyNodes, cutNodes, pasteNodes, toggleMaximizeNode, undo, redo],
     ),
   );
 
