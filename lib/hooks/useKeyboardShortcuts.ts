@@ -110,6 +110,12 @@ export function useKeyboardShortcuts(actions: ShortcutActions) {
           return;
         }
 
+        // If the user has selected text (e.g. in chat messages), let native copy/cut work
+        const selection = window.getSelection();
+        if ((e.key === "c" || e.key === "x") && selection && selection.toString().length > 0) {
+          return;
+        }
+
         if (e.key === "c") {
           e.preventDefault();
           actions.copyNodes();
