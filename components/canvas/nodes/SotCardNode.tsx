@@ -24,6 +24,7 @@ import NodeSelectionBar from "./NodeSelectionBar";
 import MinimizedNodeView from "./MinimizedNodeView";
 import MaximizePortal from "./MaximizePortal";
 import BtwOverlay from "./BtwOverlay";
+import EmojiPicker from "@/components/EmojiPicker";
 import { useBtwSelection } from "@/lib/canvas/useBtwSelection";
 import type { NodeViewMode } from "@/types";
 
@@ -88,6 +89,17 @@ function SotCardNode({
   const [linkCopied, setLinkCopied] = useState(false);
   const [contextCopied, setContextCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojiAnchorRef = useRef<HTMLButtonElement>(null);
+
+  const handleEmojiChange = useCallback(
+    (emoji: string | null) => {
+      setNodes((nds) => updateNodeData<SotNodeData>(nds, id, { emoji }));
+    },
+    [id, setNodes],
+  );
+
+  const handleCloseEmojiPicker = useCallback(() => setShowEmojiPicker(false), []);
 
   // BTW quick-ask
   const btw = useBtwSelection(id);
@@ -218,12 +230,18 @@ function SotCardNode({
 
   const hoverReveal = `transition-opacity duration-150 ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`;
 
+  const noteTitle = isNote ? (
+    <>{data.emoji && <span className="mr-1">{data.emoji}</span>}{data.title}</>
+  ) : null;
+
   // --- Header ---
   const header = isNote ? (
     // Notes: centered grey title (no badge), controls absolutely positioned so they don't shift the title
-    <div className="relative px-4 pb-1">
+    <div className="relative px-4">
       <div className="text-center">
-        <span className="text-[12px] font-semibold text-fg-faint truncate">{data.title}</span>
+        <span className="text-[12px] font-semibold text-fg-faint truncate">
+          {noteTitle}
+        </span>
       </div>
       <div className={`absolute right-4 top-0 ${hoverReveal}`}>
         <NodeWindowControls viewMode={viewMode} onViewModeChange={handleViewModeChange} />
@@ -246,6 +264,40 @@ function SotCardNode({
     </div>
   );
 
+  const isMaximized = viewMode === "maximized";
+  const emojiHeaderSlot = isNote ? (
+    <div className={`group/emoji relative px-4 ${isMaximized ? "pt-24 mb-3" : data.emoji ? "flex items-center" : ""}`}>
+      {data.emoji ? (
+        <button
+          ref={emojiAnchorRef}
+          type="button"
+          onClick={() => setShowEmojiPicker((v) => !v)}
+          className={`nodrag leading-none rounded cursor-pointer hover:bg-hover transition-colors ${isMaximized ? "text-[48px]" : "text-[28px]"}`}
+          title="Change icon"
+        >
+          {data.emoji}
+        </button>
+      ) : (
+        <button
+          ref={emojiAnchorRef}
+          type="button"
+          onClick={() => setShowEmojiPicker((v) => !v)}
+          className={`nodrag text-fg-faint rounded cursor-pointer opacity-0 group-hover/emoji:opacity-100 hover:bg-hover transition-opacity ${isMaximized ? "text-[13px] px-2 py-1" : "text-[11px] px-1.5 py-0.5"}`}
+        >
+          + Add icon
+        </button>
+      )}
+      {showEmojiPicker && (
+        <EmojiPicker
+          onSelect={handleEmojiChange}
+          onRemove={() => handleEmojiChange(null)}
+          onClose={handleCloseEmojiPicker}
+          anchorRef={emojiAnchorRef}
+        />
+      )}
+    </div>
+  ) : null;
+
   // --- Content section ---
   const contentSection = isPdf && data.pdfUrl ? (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -265,6 +317,7 @@ function SotCardNode({
             autoFocus={!!data.isEditing}
             selected={selected}
             onEditor={handleEditorReady}
+            headerSlot={emojiHeaderSlot}
           />
         </div>
       </div>
@@ -289,7 +342,7 @@ function SotCardNode({
       {viewMode !== "minimized" && <ConnectorHandle type="source" />}
       <div className={`group flex h-full flex-col rounded-lg border bg-surface shadow-sm transition-all duration-150 ${selected ? "border-selection ring-2 ring-selection/30" : "border-line hover:border-line-hover"}`}>
         {viewMode === "minimized" ? (
-          <MinimizedNodeView title={data.title} wordCount={wordCount} viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+          <MinimizedNodeView title={data.title} wordCount={wordCount} viewMode={viewMode} onViewModeChange={handleViewModeChange} emoji={data.emoji} />
         ) : (
           <>
             <div className="custom-drag-handle flex h-3.5 shrink-0 cursor-grab items-center justify-center rounded-t-lg active:cursor-grabbing" onDoubleClick={() => handleViewModeChange("minimized")}>
@@ -340,9 +393,11 @@ function SotCardNode({
             <div className="h-[3px] w-6 rounded-full bg-handle" />
           </div>
           {isNote ? (
-            <div className="relative px-4 pb-1">
+            <div className="relative px-4">
               <div className="text-center">
-                <span className="text-[12px] font-semibold text-fg-faint truncate">{data.title}</span>
+                <span className="text-[12px] font-semibold text-fg-faint truncate">
+                  {noteTitle}
+                </span>
               </div>
               <div className="absolute right-4 top-0">
                 <NodeWindowControls viewMode="maximized" onViewModeChange={handleViewModeChange} />
