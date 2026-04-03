@@ -211,18 +211,18 @@ export default function CommandPalette({
     }));
 
     const actionItems: PaletteItem[] = [
-      { id: "add-text", title: "Add Text Block", shortcutKeys: ["T"], icon: <TextIcon />, onSelect: () => { onAddTextBlock(); onClose(); } },
-      { id: "add-chat", title: "Add Chat Window", shortcutKeys: ["C"], icon: <ChatIcon />, onSelect: () => { onAddChatNode(); onClose(); } },
-      { id: "add-link", title: "Add Link", shortcutKeys: ["L"], icon: <LinkIcon />, onSelect: () => { onAddLinkNode(); onClose(); } },
-      { id: "add-context", title: "Add Context Block", shortcutKeys: ["B"], icon: <GridIcon />, onSelect: () => { onAddContextBlock(); onClose(); } },
-      { id: "add-file", title: "Upload File", icon: <FileIcon />, onSelect: () => { onAddFile(); onClose(); } },
+      { id: "add-text", title: "Add text block", shortcutKeys: ["T"], icon: <TextIcon />, onSelect: () => { onAddTextBlock(); onClose(); } },
+      { id: "add-chat", title: "Add chat window", shortcutKeys: ["C"], icon: <ChatIcon />, onSelect: () => { onAddChatNode(); onClose(); } },
+      { id: "add-link", title: "Add link", shortcutKeys: ["L"], icon: <LinkIcon />, onSelect: () => { onAddLinkNode(); onClose(); } },
+      { id: "add-context", title: "Add context block", shortcutKeys: ["B"], icon: <GridIcon />, onSelect: () => { onAddContextBlock(); onClose(); } },
+      { id: "add-file", title: "Upload file", icon: <FileIcon />, onSelect: () => { onAddFile(); onClose(); } },
     ].map((a) => ({ ...a, type: "action" as const, section: "Canvas Actions" }));
 
     const workspaceActionItems: PaletteItem[] = [
       {
         id: "new-workspace",
         type: "action",
-        title: "New Workspace",
+        title: "New workspace",
         section: "Workspace",
         icon: <PlusCircleIcon />,
         onSelect: () => { setView("create"); setNewName(""); },
@@ -230,7 +230,7 @@ export default function CommandPalette({
       {
         id: "archive-workspace",
         type: "action",
-        title: "Archive Current Workspace",
+        title: "Archive current workspace",
         meta: currentSession,
         section: "Workspace",
         icon: <ArchiveBoxIcon width={14} height={14} />,
@@ -239,7 +239,7 @@ export default function CommandPalette({
       {
         id: "rename-workspace",
         type: "action",
-        title: "Rename Current Workspace",
+        title: "Rename current workspace",
         meta: currentSession,
         section: "Workspace",
         icon: <RenameIcon width={14} height={14} />,
@@ -249,7 +249,7 @@ export default function CommandPalette({
       {
         id: "delete-workspace",
         type: "action",
-        title: "Delete Current Workspace",
+        title: "Delete current workspace",
         meta: currentSession,
         section: "Workspace",
         icon: <DeleteIcon width={14} height={14} />,
@@ -262,7 +262,7 @@ export default function CommandPalette({
       {
         id: "theme",
         type: "setting",
-        title: "Change Theme",
+        title: "Change theme",
         meta: themeId === "system" ? "System" : themeList.find((t) => t.id === themeId)?.name ?? themeId,
         section: "Settings",
         icon: <SunIcon />,
@@ -272,7 +272,7 @@ export default function CommandPalette({
       {
         id: "shortcuts",
         type: "setting",
-        title: "Keyboard Shortcuts",
+        title: "Keyboard shortcuts",
         section: "Settings",
         icon: <KeyboardIcon />,
         chevron: true,
@@ -546,20 +546,20 @@ export default function CommandPalette({
               </div>
 
               <ShortcutSection title="Canvas" shortcuts={[
-                ["Add Text Block", ["T"]],
-                ["Add Chat", ["C"]],
-                ["Add Link", ["L"]],
-                ["Add Context Block", ["B"]],
+                ["Add text block", ["T"]],
+                ["Add chat", ["C"]],
+                ["Add link", ["L"]],
+                ["Add context block", ["B"]],
               ]} />
               <ShortcutSection title="Navigation" shortcuts={[
-                ["Command Palette", ["⌘", "K"]],
+                ["Command palette", ["⌘", "K"]],
                 ["Save", ["⌘", "S"]],
-                ["Select All SOTs", ["⌘", "A"]],
-                ["Pan Canvas", ["Space"]],
+                ["Select all SOTs", ["⌘", "A"]],
+                ["Pan canvas", ["Space"]],
               ]} />
               <ShortcutSection title="Chat" shortcuts={[
-                ["Send Message", ["⏎"]],
-                ["New Line", ["⇧", "⏎"]],
+                ["Send message", ["⏎"]],
+                ["New line", ["⇧", "⏎"]],
               ]} />
             </>
           )}
